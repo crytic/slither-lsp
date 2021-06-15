@@ -67,4 +67,3 @@ class InitializeHandler(BaseCommandHandler):
                 'version': require("slither-analyzer")[0].version
             }
         }
-

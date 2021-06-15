@@ -16,8 +16,8 @@ def parse_args() -> argparse.Namespace:
     """
     # Initialize our argument parser
     parser = argparse.ArgumentParser(
-        description="slither-rpc",
-        usage="slither-rpc [options]",
+        description="slither-lsp",
+        usage="slither-lsp [options]",
     )
 
     # We want to offer a switch to communicate over a network socket rather than stdin/stdout.

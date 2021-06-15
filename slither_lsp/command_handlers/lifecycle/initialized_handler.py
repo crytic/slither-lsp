@@ -19,4 +19,3 @@ class InitializedHandler(BaseCommandHandler):
 
         # Notifications do not return a response
         return None
-

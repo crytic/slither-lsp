@@ -19,4 +19,3 @@ class ShutdownHandler(BaseCommandHandler):
 
         # The return value on success is null.
         return None
-

@@ -5,4 +5,6 @@ from slither_lsp.command_handlers.lifecycle.initialized_handler import Initializ
 from slither_lsp.command_handlers.lifecycle.shutdown_handler import ShutdownHandler
 from slither_lsp.command_handlers.lifecycle.exit_handler import ExitHandler
 
+from slither_lsp.command_handlers.slither.get_version import GetVersion
 from slither_lsp.command_handlers.slither.analyze_handler import AnalyzeHandler
+from slither_lsp.command_handlers.slither.get_detector_list_handler import GetDetectorListHandler

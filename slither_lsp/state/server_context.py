@@ -1,5 +1,5 @@
 from slither import Slither
-from typing import Callable, List, Optional
+from typing import Callable, Dict, List, Optional
 from slither_lsp.types.server_enums import TraceValue
 
 
@@ -23,7 +23,8 @@ class ServerContext:
         self.on_client_initialized: Optional[Callable[[], None]] = None
 
         # Create our analysis results structure
-        self._analysis_results = {}
+        self._analysis_results: Dict[int, Slither] = {}
+        self._next_analysis_id: int = 0
 
     def register_analysis(self, slither_instance: Slither) -> int:
         """
@@ -32,20 +33,29 @@ class ServerContext:
         performed on.
         :return: Returns a key which can be used to obtain
         """
-        # TODO: Generate a unique, prune old results so we don't bloat maybe? For now only store one instance.
-        analysis_id = 0
+        # Obtain our next analysis id
+        analysis_id = self._next_analysis_id
+        self._next_analysis_id += 1
 
         # Set our slither instance in our lookup and return the analysis id.
         self._analysis_results[analysis_id] = slither_instance
         return analysis_id
 
-    def get_analysis(self, key: int) -> Optional[Slither]:
+    def unregister_analysis(self, analysis_id: int) -> None:
+        """
+        Unregisters an analysis object associated with a unique key from a previous registration.
+        :param analysis_id: The unique key associated with a previously registered analysis.
+        :return: None
+        """
+        self._analysis_results.pop(analysis_id, None)
+
+    def get_analysis(self, analysis_id: int) -> Optional[Slither]:
         """
         Obtains an analysis object associated with a unique key during a previous registration.
-        :param key: The unique key associated with a previously registered analysis.
-        :return:
+        :param analysis_id: The unique key associated with a previously registered analysis.
+        :return: Returns a Slither object if one exists with this key, otherwise None.
         """
-        return self._analysis_results.get(key)
+        return self._analysis_results.get(analysis_id, None)
 
     @property
     def server_initialized(self) -> bool:

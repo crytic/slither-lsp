@@ -17,5 +17,11 @@ class ShutdownHandler(BaseCommandHandler):
         #  updates.
         context.shutdown = True
 
+        # TODO: We exit here, but we should not, that should happen with the 'exit' command, but sometimes
+        #  we don't get an 'exit' notification for some reason, so the language server never exits. This
+        #  should be investigated.
+        import sys
+        sys.exit(0)
+
         # The return value on success is null.
         return None

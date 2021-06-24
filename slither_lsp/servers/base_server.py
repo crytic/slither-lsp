@@ -4,9 +4,11 @@ from typing import Any, Callable, Dict, IO, Optional, Type, Tuple, Union
 from slither_lsp.state.server_context import ServerContext
 from slither_lsp.io.jsonrpc_io import JsonRpcIo
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from slither_lsp.command_handlers.lifecycle.exit_handler import ExitHandler
+from slither_lsp.command_handlers.lifecycle.exit import ExitHandler
 from slither_lsp.command_handlers import registered_handlers
 from slither_lsp.errors.lsp_error import LSPError, LSPErrorCode
+from slither.utils.output_capture import StandardOutputCapture
+import traceback
 
 # Register all imported command handlers so we have a lookup of method name -> handler
 COMMAND_HANDLERS = [getattr(registered_handlers, name) for name in dir(registered_handlers)]
@@ -97,9 +99,26 @@ class BaseServer:
                         f"A command handler does not exist for method '{method_name}'",
                         None,
                     )
+                # Disable stdout output while we invoke our command in case slither/crytic-compile output messages.
+                StandardOutputCapture.enable(True)
 
-                # Execute the relevant command handler and get the result
-                result = command_handler.process(self.context, message.get('params'))
+                # Execute the relevant command handler and get the result.
+                try:
+                    result = command_handler.process(self.context, message.get('params'))
+                except LSPError as err:
+                    # If it's an LSPError, we simply re-raise it without wrapping it.
+                    raise err
+                except Exception as err:
+                    # Wrap any other exception in an LSPError exception and raise it
+                    traceback_str = traceback.format_exc()
+                    raise LSPError(
+                        LSPErrorCode.InternalError,
+                        f"An unhandled exception occurred:\r\n{traceback_str}",
+                        traceback_str
+                    ) from err
+
+                # Re-enable stdout
+                StandardOutputCapture.disable()
 
                 # If we have a message id, it is a request, so we send back a response.
                 # Otherwise it's a notification and we don't do anything.
@@ -107,6 +126,9 @@ class BaseServer:
                     self._send_response_message(message_id, result)
 
             except LSPError as lsp_error:
+                # Re-enable stdout
+                StandardOutputCapture.disable()
+
                 # If an LSP error occurred, we send it over the wire.
                 self._send_response_error(
                     message_id,
@@ -114,6 +136,7 @@ class BaseServer:
                     lsp_error.error_message,
                     lsp_error.error_data
                 )
+
         else:
             # This should be a response to a previous request we made before.
             # Ignore responses without an id or callback functions.

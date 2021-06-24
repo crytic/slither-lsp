@@ -1,10 +1,17 @@
 # pylint: disable=unused-import,relative-beyond-top-level
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from slither_lsp.command_handlers.lifecycle.initialize_handler import InitializeHandler
-from slither_lsp.command_handlers.lifecycle.initialized_handler import InitializedHandler
-from slither_lsp.command_handlers.lifecycle.shutdown_handler import ShutdownHandler
-from slither_lsp.command_handlers.lifecycle.exit_handler import ExitHandler
+from slither_lsp.command_handlers.lifecycle.initialize import InitializeHandler
+from slither_lsp.command_handlers.lifecycle.initialized import InitializedHandler
+from slither_lsp.command_handlers.lifecycle.shutdown import ShutdownHandler
+from slither_lsp.command_handlers.lifecycle.exit import ExitHandler
 
+# crytic-compile
+from slither_lsp.command_handlers.crytic_compile.autogenerate_standard_json import AutogenerateStandardJsonHandler
+from slither_lsp.command_handlers.crytic_compile.get_command_line_args import GetCommandLineArgsHandler
+
+# slither
 from slither_lsp.command_handlers.slither.get_version import GetVersion
-from slither_lsp.command_handlers.slither.analyze_handler import AnalyzeHandler
-from slither_lsp.command_handlers.slither.get_detector_list_handler import GetDetectorListHandler
+from slither_lsp.command_handlers.slither.analysis_create import AnalysisCreateHandler
+from slither_lsp.command_handlers.slither.analysis_delete import AnalysisDeleteHandler
+from slither_lsp.command_handlers.slither.get_detector_list import GetDetectorListHandler
+from slither_lsp.command_handlers.slither.run_detectors import RunDetectorsHandler

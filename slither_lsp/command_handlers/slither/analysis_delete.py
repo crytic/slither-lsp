@@ -1,7 +1,8 @@
-from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from typing import Any
-from slither_lsp.state.server_context import ServerContext
+
+from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.errors.lsp_error import LSPError, LSPErrorCode
+from slither_lsp.state.server_context import ServerContext
 
 
 class AnalysisDeleteHandler(BaseCommandHandler):

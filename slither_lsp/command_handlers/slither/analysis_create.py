@@ -1,12 +1,14 @@
 import os
-from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from typing import Any
-from slither_lsp.state.server_context import ServerContext
-from slither_lsp.errors.lsp_error import LSPError, LSPErrorCode
-from slither import Slither
 from enum import Enum
-from crytic_compile.platform.solc_standard_json import SolcStandardJson
+from typing import Any
+
 from crytic_compile import CryticCompile
+from crytic_compile.platform.solc_standard_json import SolcStandardJson
+from slither import Slither
+
+from slither_lsp.command_handlers.base_handler import BaseCommandHandler
+from slither_lsp.errors.lsp_error import LSPError, LSPErrorCode
+from slither_lsp.state.server_context import ServerContext
 
 
 class CompilationSettingsTargetType(Enum):
@@ -19,8 +21,8 @@ class CompilationSettingsTargetType(Enum):
 
 class AnalysisCreateHandler(BaseCommandHandler):
     """
-    Handler which invokes slither analysis on a given target and returns an analysis identifier which can be used to
-    perform subsequent operations on.
+    Handler which invokes slither analysis on a given target and returns an analysis identifier
+    which can be used to perform subsequent operations on.
     """
     method_name = "$/slither/analysis/create"
 

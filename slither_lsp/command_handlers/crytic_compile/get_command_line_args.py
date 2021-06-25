@@ -1,8 +1,10 @@
-from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from typing import Any
-from slither_lsp.state.server_context import ServerContext
 from argparse import ArgumentParser
+from typing import Any
+
 from crytic_compile.cryticparser.cryticparser import init as crytic_parser_init
+
+from slither_lsp.command_handlers.base_handler import BaseCommandHandler
+from slither_lsp.state.server_context import ServerContext
 
 
 class GetCommandLineArgsHandler(BaseCommandHandler):

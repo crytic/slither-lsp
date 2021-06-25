@@ -1,7 +1,8 @@
 from enum import IntEnum
-from typing import Any, Optional
+from typing import Any
 
 
+# pylint: disable=invalid-name
 class LSPErrorCode(IntEnum):
     """
     Defines a set of error codes for use with the Language Server Protocol.

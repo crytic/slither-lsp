@@ -5,7 +5,7 @@ from threading import Lock
 from typing import Any, Optional, BinaryIO, Tuple, List, Union, IO
 
 # The regex used to parse Content-Length from the JSON-RPC messages.
-CONTENT_LENGTH_REGEX = re.compile("Content-Length:\s+(\d+)\s*", re.IGNORECASE)
+CONTENT_LENGTH_REGEX = re.compile(r"Content-Length:\s+(\d+)\s*", re.IGNORECASE)
 
 
 class JsonRpcIo:

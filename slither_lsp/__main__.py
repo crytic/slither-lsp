@@ -23,7 +23,8 @@ def parse_args() -> argparse.Namespace:
     # We want to offer a switch to communicate over a network socket rather than stdin/stdout.
     parser.add_argument(
         "--port",
-        help="Indicates that the RPC server should use a TCP socket with the provided port, rather than stdio.",
+        help="Indicates that the RPC server should use a TCP socket with the provided port, rather "
+             "than stdio.",
         type=int
     )
 

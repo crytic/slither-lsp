@@ -1,7 +1,9 @@
-from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from typing import Any
-from slither_lsp.state.server_context import ServerContext
+
 from slither.__main__ import get_detectors_and_printers, output_detectors_json
+
+from slither_lsp.command_handlers.base_handler import BaseCommandHandler
+from slither_lsp.state.server_context import ServerContext
 
 
 class GetDetectorListHandler(BaseCommandHandler):

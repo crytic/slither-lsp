@@ -2,7 +2,7 @@ from slither_lsp.types.server_enums import MessageType
 from slither_lsp.state.server_context import ServerContext
 
 
-def send_show_message_notification(context: ServerContext, message_type: MessageType, message: str) -> None:
+def send_get_workspace_folders_request(context: ServerContext, message_type: MessageType, message: str) -> None:
     """
     Sends a 'window/showMessage' notification to the client.
     Reference:

@@ -1,5 +1,6 @@
-from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from typing import Any
+
+from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.state.server_context import ServerContext
 
 

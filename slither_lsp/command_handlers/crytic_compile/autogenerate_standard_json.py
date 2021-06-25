@@ -1,9 +1,10 @@
 import os
-from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from typing import Any, Iterable, Set
-from slither_lsp.state.server_context import ServerContext
-from slither_lsp.errors.lsp_error import LSPError, LSPErrorCode
+
 from crytic_compile.platform.solc_standard_json import SolcStandardJson
+
+from slither_lsp.command_handlers.base_handler import BaseCommandHandler
+from slither_lsp.state.server_context import ServerContext
 
 
 def get_solidity_files(folders: Iterable[str], recursive=True) -> Set:
@@ -26,7 +27,9 @@ def get_solidity_files(folders: Iterable[str], recursive=True) -> Set:
 
             # If recursive, join our set with any other discovered files in subdirectories.
             if recursive:
-                solidity_files.update(get_solidity_files([os.path.join(root, d) for d in dirs], recursive))
+                solidity_files.update(
+                    get_solidity_files([os.path.join(root, d) for d in dirs], recursive)
+                )
 
     # Return all discovered solidity files
     return solidity_files
@@ -34,7 +37,8 @@ def get_solidity_files(folders: Iterable[str], recursive=True) -> Set:
 
 class AutogenerateStandardJsonHandler(BaseCommandHandler):
     """
-    Handler which auto-generates solc standard JSON manifests for Solidity files under a given directory.
+    Handler which auto-generates solc standard JSON manifests for Solidity files under a given
+    directory.
     """
     method_name = "$/cryticCompile/solcStandardJson/autogenerate"
 
@@ -55,11 +59,13 @@ class AutogenerateStandardJsonHandler(BaseCommandHandler):
         # TODO: Parse import strings, create remappings for unresolved imports.
         # Regex: import\s+[^"]*"([^"]+)".*;
 
-        # TODO: Parse semvers, find incompatibilities, put them into different compilation buckets and potentially
-        #  return data about satisfactory solc versions, which may enable us to use solc-select to compile all.
+        # TODO: Parse semvers, find incompatibilities, put them into different compilation buckets
+        #  and potentially return data about satisfactory solc versions, which may enable us to
+        #  use solc-select to compile all.
         # Regex: pragma\s+solidity\s+(.*);
 
-        # TODO: For now we return a single json manifest, but we want to split them if we have version conflicts.
+        # TODO: For now we return a single json manifest, but we want to split them if we have
+        #  version conflicts.
         standard_json = SolcStandardJson()
         for file in files:
             standard_json.add_source_file(file)

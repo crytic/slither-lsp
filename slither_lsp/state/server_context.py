@@ -1,6 +1,9 @@
-from slither import Slither
 from typing import Callable, Dict, List, Optional
+
+from slither import Slither
+
 from slither_lsp.types.server_enums import TraceValue
+from slither_lsp.types.workspace_types import WorkspaceFolder, ClientInfo
 
 
 class ServerContext:
@@ -14,9 +17,9 @@ class ServerContext:
         self.shutdown: bool = False
         self.trace: TraceValue = TraceValue.OFF
         self.server: base_server.BaseServer = server
-        self.client_name: Optional[str] = None
-        self.client_version: Optional[str] = None
-        self.workspace_uris: List[str] = []
+        self.client_info: Optional[ClientInfo] = None
+        self.client_capabilities: dict = {}
+        self.workspace_folders: List[WorkspaceFolder] = []
 
         # Create our main events
         self.on_server_initialized: Optional[Callable[[], None]] = None

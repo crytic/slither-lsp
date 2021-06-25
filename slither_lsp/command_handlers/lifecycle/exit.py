@@ -1,5 +1,6 @@
-from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from typing import Any
+
+from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.state.server_context import ServerContext
 
 
@@ -16,4 +17,3 @@ class ExitHandler(BaseCommandHandler):
         # TODO: Find a more elegant way to exit and make sure all important operations were torn down.
         import sys
         sys.exit(0)
-

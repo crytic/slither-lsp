@@ -1,7 +1,7 @@
 from typing import Any
 
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from slither_lsp.errors.lsp_error import LSPError, LSPErrorCode
+from slither_lsp.errors.lsp_errors import LSPError, LSPErrorCode
 from slither_lsp.state.server_context import ServerContext
 
 
@@ -11,8 +11,8 @@ class AnalysisDeleteHandler(BaseCommandHandler):
     """
     method_name = "$/slither/analysis/delete"
 
-    @staticmethod
-    def process(context: ServerContext, params: Any) -> Any:
+    @classmethod
+    def process(cls, context: ServerContext, params: Any) -> Any:
 
         # Verify we were provided an analysisId
         if 'analysisId' not in params:

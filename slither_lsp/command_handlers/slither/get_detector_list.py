@@ -12,8 +12,8 @@ class GetDetectorListHandler(BaseCommandHandler):
     """
     method_name = "$/slither/getDetectorList"
 
-    @staticmethod
-    def process(context: ServerContext, params: Any) -> Any:
+    @classmethod
+    def process(cls, context: ServerContext, params: Any) -> Any:
         # Obtain a list of detectors
         detectors, _ = get_detectors_and_printers()
 

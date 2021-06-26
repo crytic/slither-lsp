@@ -1,13 +1,13 @@
 import inspect
 import traceback
-from threading import Lock
+from threading import Lock, Thread
 from time import sleep
 from typing import Any, Callable, Dict, IO, Optional, Type, Tuple, Union
 
 from slither_lsp.command_handlers import registered_handlers
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.command_handlers.lifecycle.exit import ExitHandler
-from slither_lsp.errors.lsp_error import LSPError, LSPErrorCode
+from slither_lsp.errors.lsp_errors import LSPError, LSPErrorCode
 from slither_lsp.io.jsonrpc_io import JsonRpcIo
 from slither_lsp.state.server_context import ServerContext
 
@@ -19,19 +19,19 @@ COMMAND_HANDLERS = {
     if inspect.isclass(ch) and ch != BaseCommandHandler and issubclass(ch, BaseCommandHandler)
 }
 
+HANDLER_POLLING_INTERVAL: float = 0.1
+RESPONSE_POLLING_INTERVAL: float = 0.1
+
 
 class BaseServer:
     running = False
     context: ServerContext = None
     io: JsonRpcIo = None
-    _pending_response_queue: Dict[
-        Union[int, str],
-        Tuple[Optional[Callable[[Any], None]], Optional[Callable[[LSPErrorCode, str, Any], None]]]
-    ] = {}
+    _pending_response_queue: Dict[Union[int, str], Optional[Any]] = {}
     _current_server_request_id = 0
     _request_lock = Lock()
 
-    def _main_loop(self, read_file_handle: IO, write_file_handle: IO, polling_interval_secs: float = 0.1):
+    def _main_loop(self, read_file_handle: IO, write_file_handle: IO):
         """
         The main entry point for the server, which begins accepting and processing command_handlers
         on the given IO.
@@ -52,7 +52,7 @@ class BaseServer:
                 # Read a message, if there is none available, loop and wait for another.
                 result = self.io.read()
                 if result is None:
-                    sleep(polling_interval_secs)
+                    sleep(HANDLER_POLLING_INTERVAL)
                     continue
 
                 # Process the underlying message
@@ -65,7 +65,8 @@ class BaseServer:
 
     def _handle_message(self, message: Any) -> None:
         """
-        The main dispatcher for a received message. It determines which command handler to call and unpacks arguments.
+        The main dispatcher for a received message. It handles a request, notification, or response for a previously
+        made request.
         :param message: The deserialized Language Server Protocol message received over JSON-RPC.
         :return: None
         """
@@ -79,11 +80,22 @@ class BaseServer:
         # If there's a method field, its a request or notification. If there isn't, it's a response
         method_name = message.get('method')
         if method_name is not None:
-            self._handle_request_or_notification(message)
+            # All requests will be run on another thread so we can keep processing messages.
+            thread = Thread(
+                target=self._handle_request_or_notification,
+                args=(message,)
+            )
+            thread.start()
         else:
             self._handle_response(message)
 
     def _handle_request_or_notification(self, message: Any) -> None:
+        """
+        The dispatcher for a received request or notification. It determines which command handler to call and unpacks
+        arguments.
+        :param message: The deserialized Language Server Protocol message received over JSON-RPC.
+        :return: None
+        """
         # Fetch basic parameters
         message_id = message.get('id')
         method_name = message.get('method')
@@ -136,7 +148,6 @@ class BaseServer:
                 self._send_response_message(message_id, result)
 
         except LSPError as lsp_error:
-
             # If an LSP error occurred, we send it over the wire.
             self._send_response_error(
                 message_id,
@@ -155,13 +166,8 @@ class BaseServer:
         message_id = message.get('id')
 
         # Ignore responses without an id or callback functions.
-        if message_id is None or \
-                (not isinstance(message_id, str) and not isinstance(message_id, int) or
-                 message_id not in self._pending_response_queue):
+        if message_id is None or (not isinstance(message_id, str) and not isinstance(message_id, int)):
             return
-
-        # Obtain our callback options
-        (success_callback, failed_callback) = self._pending_response_queue[message_id]
 
         # Determine if this is an error or success result.
         error_info = message.get('error')
@@ -178,22 +184,16 @@ class BaseServer:
 
             # TODO: If the error is malformed, we should introduce window here later.
             #  For now we ignore.
-            if failed_callback is not None and isinstance(error_code, int) and isinstance(error_message, str):
-                failed_callback(LSPErrorCode(error_code), error_message, error_data)
+            self._pending_response_queue[message_id] = LSPError(LSPErrorCode(error_code), error_message, error_data)
         else:
             # We had a successful result.
-            if success_callback is not None:
-                success_callback(message.get('result'))
+            self._pending_response_queue[message_id] = message.get('result')
 
-    def send_request_message(self, method_name: str, params: Any,
-                             success_callback: Optional[Callable[[Any], None]],
-                             error_callback: Optional[Callable[[LSPErrorCode, str, Any], None]]):
+    def send_request_message(self, method_name: str, params: Any) -> Any:
         """
         Sends a request to the client, providing callback options in the event of success/error.
         :param method_name: The name of the method to invoke on the client.
-        :param params: The parameters to send with the request
-        :param success_callback: The function callback in the event of success. Takes result object of any type.
-        :param error_callback: The function callback in the event of an error. Takes an error code, message, and data.
+        :param params: The parameters to send with the request.
         :return: None
         """
         # Lock to avoid request id collisions
@@ -204,9 +204,6 @@ class BaseServer:
             # Increment the request id
             self._current_server_request_id += 1
 
-            # Add the callbacks for the submitted request.
-            self._pending_response_queue[request_id] = (success_callback, error_callback)
-
             # Send the request to the client
             self.io.write({
                 'jsonrpc': '2.0',
@@ -214,6 +211,22 @@ class BaseServer:
                 'method': method_name,
                 'params': params
             })
+
+            # Wait for a response
+            while request_id not in self._pending_response_queue:
+                sleep(RESPONSE_POLLING_INTERVAL)
+
+            # Obtain the response from the queue. If it was an LSP error, raise it.
+            response = self._pending_response_queue.pop(request_id)
+            if isinstance(response, LSPError):
+                raise LSPError(
+                    LSPErrorCode.InternalError,
+                    f"Request '{method_name}' failed:\r\n{response.error_message}",
+                    None
+                )
+
+            # Return the response data
+            return response
 
     def _send_response_message(self, message_id: Union[int, str, None], result: Any) -> None:
         """

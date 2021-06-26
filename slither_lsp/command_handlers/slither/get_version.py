@@ -12,8 +12,8 @@ class GetVersion(BaseCommandHandler):
     """
     method_name = "$/slither/getVersion"
 
-    @staticmethod
-    def process(context: ServerContext, params: Any) -> Any:
+    @classmethod
+    def process(cls, context: ServerContext, params: Any) -> Any:
         return {
             "slither": require("slither-analyzer")[0].version,
             "crytic_compile": require("crytic-compile")[0].version,

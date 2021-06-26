@@ -7,7 +7,7 @@ from crytic_compile.platform.solc_standard_json import SolcStandardJson
 from slither import Slither
 
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from slither_lsp.errors.lsp_error import LSPError, LSPErrorCode
+from slither_lsp.errors.lsp_errors import LSPError, LSPErrorCode
 from slither_lsp.state.server_context import ServerContext
 
 
@@ -26,8 +26,8 @@ class AnalysisCreateHandler(BaseCommandHandler):
     """
     method_name = "$/slither/analysis/create"
 
-    @staticmethod
-    def process(context: ServerContext, params: Any) -> Any:
+    @classmethod
+    def process(cls, context: ServerContext, params: Any) -> Any:
         # Verify we were provided compilation settings
         if 'compilationSettings' not in params:
             raise LSPError(

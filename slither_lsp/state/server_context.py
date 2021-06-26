@@ -1,9 +1,10 @@
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Any
 
+from pkg_resources import require
 from slither import Slither
 
-from slither_lsp.types.server_enums import TraceValue
-from slither_lsp.types.workspace_types import WorkspaceFolder, ClientInfo
+from slither_lsp.state.capabilities import ServerCapabilities, ClientCapabilities
+from slither_lsp.types.lsp_basic_structures import WorkspaceFolder, ClientServerInfo, TraceValue
 
 
 class ServerContext:
@@ -17,8 +18,9 @@ class ServerContext:
         self.shutdown: bool = False
         self.trace: TraceValue = TraceValue.OFF
         self.server: base_server.BaseServer = server
-        self.client_info: Optional[ClientInfo] = None
-        self.client_capabilities: dict = {}
+        self.client_info: Optional[ClientServerInfo] = None
+        self.client_capabilities: ClientCapabilities = ClientCapabilities()
+        self.server_capabilities: ServerCapabilities = ServerCapabilities()
         self.workspace_folders: List[WorkspaceFolder] = []
 
         # Create our main events
@@ -81,3 +83,10 @@ class ServerContext:
         self._client_initialized = value
         if value and self.on_client_initialized is not None:
             self.on_client_initialized()
+
+    @property
+    def server_info(self) -> ClientServerInfo:
+        return ClientServerInfo(
+            name='Slither Language Server',
+            version=require("slither-lsp")[0].version
+        )

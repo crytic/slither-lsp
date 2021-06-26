@@ -6,7 +6,8 @@ from typing import Any
 class LSPErrorCode(IntEnum):
     """
     Defines a set of error codes for use with the Language Server Protocol.
-    Reference: https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#responseMessage
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#responseMessage
     """
     # Defined by JSON RPC
     ParseError = -32700
@@ -55,8 +56,17 @@ class LSPError(Exception):
     """
     Represents an LSP error, which when thrown in a command handler will be sent to the LSP client.
     """
-    def __init__(self, code: LSPErrorCode, message: str, data: Any):
+    def __init__(self, code: LSPErrorCode, message: str, data: Any = None):
         self.error_code = code
         self.error_message = message
         self.error_data = data
         super().__init__()
+
+
+class LSPCommandNotSupported(LSPError):
+    """
+    Represents an exception which is thrown when a command (request/notification) is invoked but is not supported
+    by the client or server.
+    """
+    def __init__(self, message: str, code: LSPErrorCode = LSPErrorCode.InternalError, data: Any = None):
+        super().__init__(code, message, data)

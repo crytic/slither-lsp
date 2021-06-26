@@ -1,6 +1,6 @@
 import io
 import sys
-from typing import List
+from typing import List, Optional, TextIO
 
 from slither_lsp.servers.base_server import BaseServer
 
@@ -31,6 +31,10 @@ class ConsoleServer(BaseServer):
     """
     Provides a console (stdin/stdout) interface for JSON-RPC
     """
+    def __init__(self):
+        self._actual_stdin: Optional[TextIO] = None
+        self._actual_stdout: Optional[TextIO] = None
+        self._actual_stderr: Optional[TextIO] = None
 
     def start(self):
         """
@@ -38,9 +42,9 @@ class ConsoleServer(BaseServer):
         :return: None
         """
         # Fetch our stdio handles which we will use to communicate, then
-        actual_stdin = sys.stdin
-        actual_stdout = sys.stdout
-        actual_stderr = sys.stderr
+        self._actual_stdin = sys.stdin
+        self._actual_stdout = sys.stdout
+        self._actual_stderr = sys.stderr
 
         # Now that we have backed up the stdio handles, globally redirect stdout/stderr to a null
         # stream so that all other code which could print does not disturb server communications.
@@ -49,9 +53,14 @@ class ConsoleServer(BaseServer):
         sys.stderr = NullStringIO()
 
         # Start our server using stdio in binary mode for the provided IO handles.
-        self._main_loop(actual_stdin.buffer, actual_stdout.buffer)
+        self._main_loop(self._actual_stdin.buffer, self._actual_stdout.buffer)
 
+    def stop(self):
+        """
+        Stops the server from processing commands and restores the previously suppressed stdio handles.
+        :return: None
+        """
         # If execution has ceased, restore the stdio file handles so that printing can resume as usual.
-        sys.stdin = actual_stdin
-        sys.stdout = actual_stdout
-        sys.stderr = actual_stderr
+        sys.stdin = self._actual_stdin
+        sys.stdout = self._actual_stdout
+        sys.stderr = self._actual_stderr

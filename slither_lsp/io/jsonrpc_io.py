@@ -13,7 +13,8 @@ class JsonRpcIo:
     Provides IO for Language Server Protocol JSON-RPC over generic file handles.
 
     Target: Language Server Protocol 3.16
-    https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/
     """
     def __init__(self, read_file_handle: IO, write_file_handle: IO):
         self._read_file_handle = read_file_handle

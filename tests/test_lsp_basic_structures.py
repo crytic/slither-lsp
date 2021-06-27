@@ -1,6 +1,7 @@
 import json
 from slither_lsp.types.lsp_basic_structures import ClientServerInfo, WorkspaceFolder, Position, Range, Location, \
-    LocationLink, DiagnosticRelatedInformation, Diagnostic, CodeDescription, DiagnosticSeverity, DiagnosticTag
+    LocationLink, DiagnosticRelatedInformation, DiagnosticSeverity, DiagnosticTag, Diagnostic, CodeDescription, \
+    Command, TextEdit, AnnotatedTextEdit, ChangeAnnotation
 
 
 def test_client_server_info():
@@ -133,7 +134,7 @@ def test_diagnostic_related_information():
     expected_location = Location("/file/testpath/testuripath", Range(Position(123, 456), Position(789, 100)))
     expected_message = "testMessagePlaceholder"
 
-    # Test parsing location link data
+    # Test parsing diagnostic related information
     diagnostic_related_info: DiagnosticRelatedInformation = DiagnosticRelatedInformation.from_dict({
         'location': expected_location.to_dict(),
         'message': expected_message
@@ -150,7 +151,7 @@ def test_code_description():
     # Create our expected variables we'll construct tests with.
     expected_href = "testHrefString"
 
-    # Test parsing location link data
+    # Test parsing code description
     code_description: CodeDescription = CodeDescription.from_dict({
         'href': expected_href
     })
@@ -207,3 +208,90 @@ def test_diagnostic():
     diagnostic_copy = Diagnostic.from_dict(diagnostic.to_dict())
     assert diagnostic == diagnostic_copy
     assert json.dumps(diagnostic.to_dict()) == json.dumps(diagnostic_copy.to_dict())
+
+
+def test_command():
+    # Create our expected variables we'll construct tests with.
+    expected_title = "testHrefString"
+    expected_command = "testCommandString"
+    expected_arguments = [
+        {'A': 'OK', 'B': 'Hello!'},
+        0,
+        77,
+        False
+    ]
+
+    # Test parsing command data
+    command: Command = Command.from_dict({
+        'title': expected_title,
+        'command': expected_command,
+        'arguments': expected_arguments
+    })
+    assert command.title == expected_title and \
+           command.command == expected_command and \
+           command.arguments == expected_arguments
+
+    # Test round trip conversion of the location data
+    command_copy = Command.from_dict(command.to_dict())
+    assert command == command_copy
+    assert json.dumps(command.to_dict()) == json.dumps(command_copy.to_dict())
+
+
+def test_textedit():
+    # Create our expected variables we'll construct tests with.
+    expected_range = Range(Position(123, 456), Position(321, 654))
+    expected_new_text = "testNewText"
+
+    # Test parsing location link data
+    text_edit: TextEdit = TextEdit.from_dict({
+        'range': expected_range.to_dict(),
+        'newText': expected_new_text
+    })
+    assert text_edit.range == expected_range and text_edit.new_text == expected_new_text
+
+    # Test round trip conversion of the location data
+    text_edit_copy = TextEdit.from_dict(text_edit.to_dict())
+    assert text_edit == text_edit_copy
+    assert json.dumps(text_edit.to_dict()) == json.dumps(text_edit_copy.to_dict())
+
+
+def test_change_annotation():
+    # Create our expected variables we'll construct tests with.
+    expected_label = "testLabel"
+    expected_needs_confirmation = False
+    expected_description = "testDescription"
+
+    # Test parsing location link data
+    change_annotation: ChangeAnnotation = ChangeAnnotation.from_dict({
+        'label': expected_label,
+        'needsConfirmation': expected_needs_confirmation,
+        'description': expected_description
+    })
+    assert change_annotation.label == expected_label and \
+           change_annotation.needs_confirmation == expected_needs_confirmation and \
+           change_annotation.description == expected_description
+
+    # Test round trip conversion of the location data
+    change_annotation_copy = ChangeAnnotation.from_dict(change_annotation.to_dict())
+    assert change_annotation == change_annotation_copy
+    assert json.dumps(change_annotation.to_dict()) == json.dumps(change_annotation_copy.to_dict())
+
+
+def test_annotated_text_edit():
+    # Create our expected variables we'll construct tests with.
+    expected_range = Range(Position(123, 456), Position(321, 654))
+    expected_new_text = "testNewText"
+    expected_annotation_id = "testAnnotationId"
+
+    # Test parsing location link data
+    annotated_text_edit: AnnotatedTextEdit = AnnotatedTextEdit.from_dict({
+        'range': expected_range.to_dict(),
+        'newText': expected_new_text,
+        'annotationId': expected_annotation_id
+    })
+    assert annotated_text_edit.range == expected_range and annotated_text_edit.new_text == expected_new_text
+
+    # Test round trip conversion of the location data
+    annotated_text_edit_copy = AnnotatedTextEdit.from_dict(annotated_text_edit.to_dict())
+    assert annotated_text_edit == annotated_text_edit_copy
+    assert json.dumps(annotated_text_edit.to_dict()) == json.dumps(annotated_text_edit_copy.to_dict())

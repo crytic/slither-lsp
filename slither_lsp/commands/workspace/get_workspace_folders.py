@@ -1,6 +1,6 @@
 from typing import Any
 
-from slither_lsp.commands.base_command import BaseCommandWithDynamicCapabilities
+from slither_lsp.commands.base_command import BaseCommandWithDynamicCapabilities, requires_capabilities
 from slither_lsp.state.server_context import ServerContext
 from slither_lsp.errors.lsp_errors import LSPCommandNotSupported
 
@@ -23,6 +23,11 @@ class GetWorkspaceFoldersRequest(BaseCommandWithDynamicCapabilities):
 
     @classmethod
     def has_capabilities(cls, context: ServerContext) -> bool:
+        """
+        Checks if the client and server have capabilities for this command.
+        :param context: The server context which tracks state for the server.
+        :return: A boolean indicating whether the client and server have appropriate capabilities to run this command.
+        """
         client_supported: bool = context.client_capabilities.get_from_path(
             ['workspace', 'workspaceFolders'],
             default=False,
@@ -36,6 +41,7 @@ class GetWorkspaceFoldersRequest(BaseCommandWithDynamicCapabilities):
         return client_supported and server_supported
 
     @classmethod
+    @requires_capabilities
     def send(cls, context: ServerContext) -> Any:
         """
         Sends a 'workspace/workspaceFolders' request to the client to obtain workspace folders.
@@ -44,11 +50,6 @@ class GetWorkspaceFoldersRequest(BaseCommandWithDynamicCapabilities):
         :param context: The server context which determines the server to use to send the message.
         :return: None
         """
-        # Raise an exception if this command is unsupported
-        if not cls.has_capabilities(context):
-            raise LSPCommandNotSupported(
-                f"'{cls.method_name}' is not supported due to client/server capabilities."
-            )
 
         # Invoke the operation otherwise.
         workspace_folders = context.server.send_request_message(

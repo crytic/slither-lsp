@@ -6,6 +6,8 @@ from typing import Optional, Any, Union, List
 # These structures ideally would just be dataclass objects, so we could cast dictionaries to dataclasses.
 # However, dataclasses cannot initialize with unexpected parameters, and we can't assume the Language Server
 # Protocol won't change and add more keys. So we handle parsing ourselves for now.
+# See more at the link below:
+# https://microsoft.github.io/language-server-protocol/specifications/specification-current/#basic-json-structures
 
 # Text documents have a defined EOL.
 # https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocuments
@@ -34,19 +36,19 @@ class ClientServerInfo:
         """
         name: str = obj.get('name')
         version: Optional[str] = obj.get('version')
-        return cls(name, version)
+        return cls(name=name, version=version)
 
     def to_dict(self) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        # Compile our mandatory results
+        # Set our mandatory fields
         result = {
             "name": self.name
         }
 
-        # Add optional parameters
+        # Set optional fields
         if self.version is not None:
             result["version"] = self.version
 
@@ -64,17 +66,6 @@ class MessageType(IntEnum):
     WARNING = 2
     INFO = 3
     LOG = 4
-
-
-class TraceValue(Enum):
-    """
-    Defines the level of verbosity to trace server actions with.
-    References:
-        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#traceValue
-    """
-    OFF = 'off'
-    MESSAGES = 'messages'
-    VERBOSE = 'verbose'
 
 
 @dataclass
@@ -100,7 +91,7 @@ class WorkspaceFolder:
         """
         uri: str = obj.get('uri')
         name: str = obj.get('name')
-        return cls(uri, name)
+        return cls(uri=uri, name=name)
 
     def to_dict(self) -> Any:
         """
@@ -140,7 +131,7 @@ class Position:
         """
         line: int = obj.get('line')
         character: int = obj.get('character')
-        return cls(line, character)
+        return cls(line=line, character=character)
 
     def to_dict(self) -> Any:
         """
@@ -172,7 +163,7 @@ class Range:
         """
         start = Position.from_dict(obj.get('start'))
         end = Position.from_dict(obj.get('end'))
-        return cls(start, end)
+        return cls(start=start, end=end)
 
     def to_dict(self) -> Any:
         """
@@ -204,7 +195,7 @@ class Location:
         """
         location_uri: str = obj.get('uri')
         location_range = Range.from_dict(obj.get('range'))
-        return cls(location_uri, location_range)
+        return cls(uri=location_uri, range=location_range)
 
     def to_dict(self) -> Any:
         """
@@ -259,21 +250,24 @@ class LocationLink:
         ll_target_uri = obj.get('targetUri')
         ll_target_range = Range.from_dict(obj.get('targetRange'))
         ll_target_selection_range = Range.from_dict(obj.get('targetSelectionRange'))
-        return cls(ll_origin_selection_range, ll_target_uri, ll_target_range, ll_target_selection_range)
+        return cls(
+            origin_selection_range=ll_origin_selection_range, target_uri=ll_target_uri, target_range=ll_target_range,
+            target_selection_range=ll_target_selection_range
+        )
 
     def to_dict(self) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        # Compile our mandatory results
+        # Set our mandatory fields
         result = {
             'targetUri': self.target_uri,
             'targetRange': self.target_range.to_dict(),
             'targetSelectionRange': self.target_selection_range.to_dict(),
         }
 
-        # Add optional parameters
+        # Set optional fields
         if self.origin_selection_range is not None:
             result['originSelectionRange'] = self.origin_selection_range.to_dict()
 
@@ -332,7 +326,7 @@ class DiagnosticRelatedInformation:
         """
         location: Location = Location.from_dict(obj.get('location'))
         message: str = obj.get('message')
-        return cls(location, message)
+        return cls(location=location, message=message)
 
     def to_dict(self) -> Any:
         """
@@ -362,7 +356,7 @@ class CodeDescription:
         :return: Returns an instance of the class.
         """
         href: str = obj.get('href')
-        return cls(href)
+        return cls(href=href)
 
     def to_dict(self) -> Any:
         """
@@ -450,7 +444,8 @@ class Diagnostic:
         d_data: Any = obj.get('data')
 
         return cls(
-            d_range, d_severity, d_code, d_code_description, d_source, d_message, d_tags, d_related_information, d_data
+            range=d_range, severity=d_severity, code=d_code, code_description=d_code_description, source=d_source,
+            message=d_message, tags=d_tags, related_information=d_related_information, data=d_data
         )
 
     def to_dict(self) -> Any:
@@ -458,13 +453,13 @@ class Diagnostic:
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        # Compile our mandatory results
+        # Set our mandatory fields
         result = {
             'range': self.range.to_dict(),
             'message': self.message
         }
 
-        # Add optional parameters
+        # Set optional fields
         if self.severity is not None:
             result['severity'] = int(self.severity)
         if self.code is not None:
@@ -482,3 +477,195 @@ class Diagnostic:
 
         # Return the result.
         return result
+
+
+@dataclass
+class Command:
+    """
+    Data structure which represents a command which can be registered on the client side to be invoked on the server.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-current/#command
+    """
+    # The title of the command, like `save`.
+    title: str
+
+    # The identifier of the actual command handler
+    command: str
+
+    # Arguments that the command handler should be invoked with
+    arguments: Optional[List[Any]]
+
+    @classmethod
+    def from_dict(cls, obj: dict) -> 'Command':
+        """
+        Parses the provided object into an instance of the class.
+        :param obj: The dictionary object to parse this structure from.
+        :return: Returns an instance of the class.
+        """
+        title: str = obj.get('title')
+        command: str = obj.get('command')
+        arguments: Optional[List[Any]] = obj.get('arguments')
+
+        return cls(title=title, command=command, arguments=arguments)
+
+    def to_dict(self) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Set our mandatory fields
+        result = {
+            'title': self.title,
+            'command': self.command
+        }
+
+        # Set optional fields
+        if self.arguments is not None:
+            result['arguments'] = self.arguments
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class TextEdit:
+    """
+    Data structure which represents a textual edit applicable to a text document.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textEdit
+    """
+    # The range of the text document to be manipulated. To insert
+    # text into a document create a range where start === end.
+    range: Range
+
+    # The string to be inserted. For delete operations use an
+    # empty string.
+    new_text: str
+
+    @classmethod
+    def from_dict(cls, obj: dict) -> 'TextEdit':
+        """
+        Parses the provided object into an instance of the class.
+        :param obj: The dictionary object to parse this structure from.
+        :return: Returns an instance of the class.
+        """
+        te_range = Range.from_dict(obj.get('range'))
+        te_new_text: str = obj.get('newText')
+
+        return cls(range=te_range, new_text=te_new_text)
+
+    def to_dict(self) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Set our mandatory fields
+        result = {
+            'range': self.range.to_dict(),
+            'newText': self.new_text
+        }
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class ChangeAnnotation:
+    """
+    Data structure which represents additional information regarding document changes.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#changeAnnotation
+    """
+    # A human-readable string describing the actual change. The string
+    # is rendered prominent in the user interface.
+    label: str
+
+    # A flag which indicates that user confirmation is needed
+    # before applying the change.
+    needs_confirmation: Optional[bool]
+
+    # A human-readable string which is rendered less prominent in
+    # the user interface.
+    description: Optional[str]
+
+    @classmethod
+    def from_dict(cls, obj: dict) -> 'ChangeAnnotation':
+        """
+        Parses the provided object into an instance of the class.
+        :param obj: The dictionary object to parse this structure from.
+        :return: Returns an instance of the class.
+        """
+        label: str = obj.get('label')
+        needs_confirmation: Optional[bool] = obj.get('needsConfirmation')
+        description: Optional[str] = obj.get('description')
+
+        return cls(label=label, needs_confirmation=needs_confirmation, description=description)
+
+    def to_dict(self) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Set our mandatory fields
+        result = {
+            'label': self.label
+        }
+
+        # Set optional fields
+        if self.needs_confirmation is not None:
+            result['needsConfirmation'] = self.needs_confirmation
+        if self.description is not None:
+            result['description'] = self.description
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class AnnotatedTextEdit(TextEdit):
+    """
+    Data structure which represents a special text edit with an additional change annotation.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#annotatedTextEdit
+    """
+
+    # The actual annotation identifier.
+    annotation_id: str
+
+    @classmethod
+    def from_dict(cls, obj: dict) -> 'AnnotatedTextEdit':
+        """
+        Parses the provided object into an instance of the class.
+        :param obj: The dictionary object to parse this structure from.
+        :return: Returns an instance of the class.
+        """
+        ate_range = Range.from_dict(obj.get('range'))
+        ate_new_text: str = obj.get('newText')
+        ate_annotation_id = obj.get('annotationId')
+
+        return cls(range=ate_range, new_text=ate_new_text, annotation_id=ate_annotation_id)
+
+    def to_dict(self) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Set our base fields
+        result = super().to_dict()
+
+        # Set our additional fields
+        result['annotationId'] = self.annotation_id
+
+        # Return the result.
+        return result
+
+
+class TraceValue(Enum):
+    """
+    Defines the level of verbosity to trace server actions with.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#traceValue
+    """
+    OFF = 'off'
+    MESSAGES = 'messages'
+    VERBOSE = 'verbose'

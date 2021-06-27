@@ -10,10 +10,6 @@ class LogMessageNotification(BaseCommand):
     method_name = 'window/logMessage'
 
     @classmethod
-    def has_capabilities(cls, context: ServerContext) -> bool:
-        return True
-
-    @classmethod
     def send(cls, context: ServerContext, message_type: MessageType, message: str) -> None:
         """
         Sends a 'window/logMessage' notification to the client.

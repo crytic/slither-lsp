@@ -1,25 +1,16 @@
-from typing import Any
+from typing import Any, Optional
 
-from slither_lsp.commands.base_command import BaseCommandWithDynamicCapabilities, requires_capabilities
+from slither_lsp.commands.base_command import BaseCommand
 from slither_lsp.state.server_context import ServerContext
 from slither_lsp.errors.lsp_errors import LSPCommandNotSupported
 
 
-class GetWorkspaceFoldersRequest(BaseCommandWithDynamicCapabilities):
+class GetWorkspaceFoldersRequest(BaseCommand):
     """
     Command which obtains an array of workspace folders.
     """
+
     method_name = "workspace/workspaceFolders"
-
-    @classmethod
-    def register_capability(cls, context: ServerContext) -> None:
-        # TODO: There is a dynamic capability for this, add support for it.
-        raise NotImplementedError()
-
-    @classmethod
-    def unregister_capability(cls, context: ServerContext) -> None:
-        # TODO: There is a dynamic capability for this, add support for it.
-        raise NotImplementedError()
 
     @classmethod
     def has_capabilities(cls, context: ServerContext) -> bool:
@@ -41,7 +32,6 @@ class GetWorkspaceFoldersRequest(BaseCommandWithDynamicCapabilities):
         return client_supported and server_supported
 
     @classmethod
-    @requires_capabilities
     def send(cls, context: ServerContext) -> Any:
         """
         Sends a 'workspace/workspaceFolders' request to the client to obtain workspace folders.
@@ -50,6 +40,9 @@ class GetWorkspaceFoldersRequest(BaseCommandWithDynamicCapabilities):
         :param context: The server context which determines the server to use to send the message.
         :return: None
         """
+        # Throw an exception if we don't support the underlying capabilities.
+        if not cls.has_capabilities(context):
+            LSPCommandNotSupported.from_command(cls)
 
         # Invoke the operation otherwise.
         workspace_folders = context.server.send_request_message(

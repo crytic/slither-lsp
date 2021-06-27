@@ -1,8 +1,10 @@
 from enum import IntEnum
-from typing import Any
-
+from typing import Any, Union, Type
 
 # pylint: disable=invalid-name
+from slither_lsp.commands.base_command import BaseCommand
+
+
 class LSPErrorCode(IntEnum):
     """
     Defines a set of error codes for use with the Language Server Protocol.
@@ -70,3 +72,12 @@ class LSPCommandNotSupported(LSPError):
     """
     def __init__(self, message: str, code: LSPErrorCode = LSPErrorCode.InternalError, data: Any = None):
         super().__init__(code, message, data)
+
+    @staticmethod
+    def from_command(command: Union[BaseCommand, Type[BaseCommand]]) -> 'LSPCommandNotSupported':
+        """
+        Generates a generic exception for a given command.
+        :param command: The command to create an exception for.
+        :return: Returns an instance of this exception.
+        """
+        return LSPCommandNotSupported(f"'{command.method_name}' is not supported due to client/server capabilities.")

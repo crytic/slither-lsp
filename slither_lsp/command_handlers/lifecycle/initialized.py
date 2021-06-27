@@ -16,8 +16,8 @@ class InitializedHandler(BaseCommandHandler):
     def process(cls, context: ServerContext, params: Any) -> Any:
 
         # Set our context into an initialized state.
-        # TODO: Create and trigger an event for this.
         context.client_initialized = True
+        context.event_emitter.emit('client.initialized')
 
         # Notifications do not return a response
         return None

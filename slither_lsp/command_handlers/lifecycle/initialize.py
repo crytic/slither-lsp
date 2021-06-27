@@ -4,9 +4,9 @@ from pkg_resources import require
 
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.errors.lsp_errors import LSPErrorCode, LSPError
-from slither_lsp.state.capabilities import ClientCapabilities
+from slither_lsp.state.capabilities import Capabilities
 from slither_lsp.state.server_context import ServerContext
-from slither_lsp.types.lsp_basic_structures import ClientServerInfo, WorkspaceFolder
+from slither_lsp.types.lsp_basic_structures import ClientServerInfo, WorkspaceFolder, TraceValue
 
 
 class InitializeHandler(BaseCommandHandler):
@@ -36,7 +36,7 @@ class InitializeHandler(BaseCommandHandler):
         # Parse trace level
         trace_level = params.get('trace')
         if trace_level is not None and isinstance(trace_level, str):
-            context.trace = trace_level
+            context.trace = TraceValue(trace_level)
 
         # Obtain the workspace folders
         context.workspace_folders = []
@@ -56,11 +56,11 @@ class InitializeHandler(BaseCommandHandler):
                 ]
 
         # Parse client capabilities
-        context.client_capabilities = ClientCapabilities(params.get('capabilities'))
+        context.client_capabilities = Capabilities(params.get('capabilities'))
 
-        # Set our server as initialized
-        # TODO: Create and trigger an event for this.
+        # Set our server as initialized, trigger relevant event
         context.server_initialized = True
+        context.event_emitter.emit('server.initialized')
 
         # Return our server capabilities
         return {

@@ -12,10 +12,6 @@ class ShowMessageNotification(BaseCommand):
     method_name = 'window/showMessage'
 
     @classmethod
-    def has_capabilities(cls, context: ServerContext) -> bool:
-        return True
-
-    @classmethod
     def send(cls, context: ServerContext, message_type: MessageType, message: str) -> None:
         """
         Sends a 'window/showMessage' notification to the client.

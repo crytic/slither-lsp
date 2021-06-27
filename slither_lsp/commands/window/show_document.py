@@ -1,6 +1,6 @@
 from typing import Any, Optional
 
-from slither_lsp.commands.base_command import BaseCommand, requires_capabilities
+from slither_lsp.commands.base_command import BaseCommand
 from slither_lsp.errors.lsp_errors import LSPCommandNotSupported
 from slither_lsp.state.server_context import ServerContext
 from slither_lsp.types.lsp_basic_structures import MessageType, Range
@@ -22,7 +22,6 @@ class ShowDocumentRequest(BaseCommand):
         return client_supported
 
     @classmethod
-    @requires_capabilities
     def send(cls, context: ServerContext, uri: str, external: Optional[bool] = None, take_focus: Optional[bool] = None,
              selection: Optional[Range] = None) -> Any:
         """
@@ -40,7 +39,11 @@ class ShowDocumentRequest(BaseCommand):
         :return: Returns a boolean indicating if the operation had succeeded.
         """
 
-        # Construct our notification data
+        # Throw an exception if we don't support the underlying capabilities.
+        if not cls.has_capabilities(context):
+            LSPCommandNotSupported.from_command(cls)
+
+        # Construct our request data
         request = {
             'uri': uri
         }

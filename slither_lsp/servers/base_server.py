@@ -4,11 +4,14 @@ from threading import Lock, Thread
 from time import sleep
 from typing import Any, Callable, Dict, IO, Optional, Type, Tuple, Union
 
+from pymitter import EventEmitter
+
 from slither_lsp.command_handlers import registered_handlers
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.command_handlers.lifecycle.exit import ExitHandler
 from slither_lsp.errors.lsp_errors import LSPError, LSPErrorCode
 from slither_lsp.io.jsonrpc_io import JsonRpcIo
+from slither_lsp.state.capabilities import Capabilities
 from slither_lsp.state.server_context import ServerContext
 
 # Register all imported command handlers so we have a lookup of method name -> handler
@@ -24,12 +27,20 @@ RESPONSE_POLLING_INTERVAL: float = 0.1
 
 
 class BaseServer:
-    running = False
-    context: ServerContext = None
-    io: JsonRpcIo = None
-    _pending_response_queue: Dict[Union[int, str], Optional[Any]] = {}
-    _current_server_request_id = 0
-    _request_lock = Lock()
+    """
+    TODO:
+    """
+    def __init__(self, server_capabilities: Capabilities):
+        self.running: bool = False
+        self.context: Optional[ServerContext] = None
+        self.io: Optional[JsonRpcIo] = None
+        self._pending_response_queue: Dict[Union[int, str], Optional[Any]] = {}
+        self._current_server_request_id = 0
+        self._request_lock = Lock()
+        self._init_server_capabilities: Capabilities = server_capabilities
+
+        # Create our main event emitter
+        self.event_emitter = EventEmitter()
 
     def _main_loop(self, read_file_handle: IO, write_file_handle: IO):
         """
@@ -41,7 +52,8 @@ class BaseServer:
         self.running = True
 
         # Reset server state and set our IO
-        self.context = ServerContext(self)
+        server_capabilities = self._init_server_capabilities.clone() if self._init_server_capabilities is not None else None
+        self.context = ServerContext(self, server_capabilities=server_capabilities)
         self.io = JsonRpcIo(read_file_handle, write_file_handle)
 
         # Continuously process messages.
@@ -80,12 +92,7 @@ class BaseServer:
         # If there's a method field, its a request or notification. If there isn't, it's a response
         method_name = message.get('method')
         if method_name is not None:
-            # All requests will be run on another thread so we can keep processing messages.
-            thread = Thread(
-                target=self._handle_request_or_notification,
-                args=(message,)
-            )
-            thread.start()
+            self._handle_request_or_notification(message)
         else:
             self._handle_response(message)
 
@@ -204,29 +211,29 @@ class BaseServer:
             # Increment the request id
             self._current_server_request_id += 1
 
-            # Send the request to the client
-            self.io.write({
-                'jsonrpc': '2.0',
-                'id': request_id,
-                'method': method_name,
-                'params': params
-            })
+        # Send the request to the client
+        self.io.write({
+            'jsonrpc': '2.0',
+            'id': request_id,
+            'method': method_name,
+            'params': params
+        })
 
-            # Wait for a response
-            while request_id not in self._pending_response_queue:
-                sleep(RESPONSE_POLLING_INTERVAL)
+        # Wait for a response
+        while request_id not in self._pending_response_queue:
+            sleep(RESPONSE_POLLING_INTERVAL)
 
-            # Obtain the response from the queue. If it was an LSP error, raise it.
-            response = self._pending_response_queue.pop(request_id)
-            if isinstance(response, LSPError):
-                raise LSPError(
-                    LSPErrorCode.InternalError,
-                    f"Request '{method_name}' failed:\r\n{response.error_message}",
-                    None
-                )
+        # Obtain the response from the queue. If it was an LSP error, raise it.
+        response = self._pending_response_queue.pop(request_id)
+        if isinstance(response, LSPError):
+            raise LSPError(
+                LSPErrorCode.InternalError,
+                f"Request '{method_name}' failed:\r\n{response.error_message}",
+                None
+            )
 
-            # Return the response data
-            return response
+        # Return the response data
+        return response
 
     def _send_response_message(self, message_id: Union[int, str, None], result: Any) -> None:
         """

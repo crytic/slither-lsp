@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
 from slither_lsp.commands.base_command import BaseCommand
-from slither_lsp.errors.lsp_errors import LSPCommandNotSupported
+from slither_lsp.errors.lsp_errors import CapabilitiesNotSupportedError
 from slither_lsp.state.server_context import ServerContext
 from slither_lsp.types.lsp_basic_structures import MessageType, Range
 
@@ -14,8 +14,8 @@ class ShowDocumentRequest(BaseCommand):
 
     @classmethod
     def has_capabilities(cls, context: ServerContext) -> bool:
-        client_supported: bool = context.client_capabilities.get_from_path(
-            ['window', 'showDocument', 'support'],
+        client_supported: bool = context.client_capabilities.get(
+            'window.showDocument.support',
             default=False,
             enforce_type=bool
         )
@@ -41,7 +41,7 @@ class ShowDocumentRequest(BaseCommand):
 
         # Throw an exception if we don't support the underlying capabilities.
         if not cls.has_capabilities(context):
-            LSPCommandNotSupported.from_command(cls)
+            raise CapabilitiesNotSupportedError(cls)
 
         # Construct our request data
         request = {

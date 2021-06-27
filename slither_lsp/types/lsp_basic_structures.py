@@ -80,7 +80,7 @@ class WorkspaceFolder:
 
     # The name of the workspace folder. Used to refer to this
     # workspace folder in the user interface.
-    name: str
+    name: Optional[str]
 
     @classmethod
     def from_dict(cls, obj: dict) -> 'WorkspaceFolder':

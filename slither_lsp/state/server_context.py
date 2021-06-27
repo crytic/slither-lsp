@@ -3,33 +3,38 @@ from typing import Callable, Dict, List, Optional, Any
 from pkg_resources import require
 from slither import Slither
 
-from slither_lsp.state.capabilities import ServerCapabilities, ClientCapabilities
+from slither_lsp.state.capabilities import Capabilities
 from slither_lsp.types.lsp_basic_structures import WorkspaceFolder, ClientServerInfo, TraceValue
+from pymitter import EventEmitter
 
 
 class ServerContext:
-    def __init__(self, server):
+    def __init__(self, server, server_capabilities=None):
         # Import late here to avoid circular reference issues.
         import slither_lsp.servers.base_server as base_server
 
         # Create our basic LSP state variables
-        self._server_initialized: bool = False
-        self._client_initialized: bool = False
+        self.server_initialized: bool = False
+        self.client_initialized: bool = False
         self.shutdown: bool = False
         self.trace: TraceValue = TraceValue.OFF
         self.server: base_server.BaseServer = server
         self.client_info: Optional[ClientServerInfo] = None
-        self.client_capabilities: ClientCapabilities = ClientCapabilities()
-        self.server_capabilities: ServerCapabilities = ServerCapabilities()
+        self.client_capabilities: Capabilities = Capabilities()
+        self.server_capabilities: Capabilities = server_capabilities or Capabilities()
         self.workspace_folders: List[WorkspaceFolder] = []
-
-        # Create our main events
-        self.on_server_initialized: Optional[Callable[[], None]] = None
-        self.on_client_initialized: Optional[Callable[[], None]] = None
 
         # Create our analysis results structure
         self._analysis_results: Dict[int, Slither] = {}
         self._next_analysis_id: int = 0
+
+    @property
+    def event_emitter(self):
+        """
+        Represents the main event emitter used by this server. This simply forwards to server.event_emitter.
+        :return: Returns the main event emitter used by this server.
+        """
+        return self.server.event_emitter
 
     def register_analysis(self, slither_instance: Slither) -> int:
         """
@@ -61,28 +66,6 @@ class ServerContext:
         :return: Returns a Slither object if one exists with this key, otherwise None.
         """
         return self._analysis_results.get(analysis_id, None)
-
-    @property
-    def server_initialized(self) -> bool:
-        return self._server_initialized
-
-    @server_initialized.setter
-    def server_initialized(self, value: bool) -> None:
-        # Set our initialized property and trigger the relevant event
-        self._server_initialized = value
-        if value and self.on_server_initialized is not None:
-            self.on_server_initialized()
-
-    @property
-    def client_initialized(self) -> bool:
-        return self._client_initialized
-
-    @client_initialized.setter
-    def client_initialized(self, value: bool) -> None:
-        # Set our initialized property and trigger the relevant event
-        self._client_initialized = value
-        if value and self.on_client_initialized is not None:
-            self.on_client_initialized()
 
     @property
     def server_info(self) -> ClientServerInfo:

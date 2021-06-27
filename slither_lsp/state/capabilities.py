@@ -1,4 +1,4 @@
-from typing import Any, List, Optional
+from typing import Any, List, Optional, Union
 
 
 class Capabilities:
@@ -16,8 +16,7 @@ class Capabilities:
         else:
             self._data = data
 
-    def get_from_path(self, path: List[str], default: Any = None, enforce_type: Optional[type] = None
-    ) -> Any:
+    def get(self, path: Union[str, List[str]], default: Any = None, enforce_type: Optional[type] = None) -> Any:
         """
         Obtains a value from the internal capability data at the given path. If it does not exist, the default value
         provided is returned.
@@ -27,6 +26,10 @@ class Capabilities:
         :return: Returns the value at the given key path in the internal capability data, otherwise returns the
         default value.
         """
+        # If the path is a string, delimit it with '.'
+        if isinstance(path, str):
+            path = path.split('.')
+
         # Iterate over our path until we arrive at our destination.
         result = self._data
 
@@ -49,7 +52,7 @@ class Capabilities:
         # Return our result
         return result
 
-    def set_at_path(self, path: List[str], value: Any) -> None:
+    def set(self, path: Union[str, List[str]], value: Any) -> None:
         """
         Sets a value in the internal capability data at the given path. If the path does not exist, dictionaries are
         created for every key before the value is finally placed at the correct location.
@@ -57,6 +60,10 @@ class Capabilities:
         :param value: Sets the value at the given key path in the internal capability data.
         :return: None
         """
+        # If the path is a string, delimit it with '.'
+        if isinstance(path, str):
+            path = path.split('.')
+
         # Iterate over our path until we arrive at our destination.
         result = self._data
 
@@ -86,31 +93,9 @@ class Capabilities:
         """
         return self._data
 
-
-class ServerCapabilities(Capabilities):
-    """
-    Server Capabilities wrapper which manages underlying capability properties.
-    """
-    def __init__(self):
-        super().__init__(
-            {
-                # TODO: Relay server capabilities to the client.
-                "workspace": {
-                    "workspaceFolders": {
-                        # The server supports workspace folders
-                        "supported": True,
-
-                        # changeNotifications is a boolean which indicates we want workspace change notifications,
-                        # or it is a string which is meant to be an ID which the notification is registered on the
-                        # client side. It can later be unregistered using a unregister capability request.
-                        # "changeNotifications": True
-                    }
-                }
-            }
-        )
-
-
-class ClientCapabilities(Capabilities):
-    """
-    Client Capabilities wrapper which manages underlying capability properties.
-    """
+    def clone(self) -> 'Capabilities':
+        """
+        Clones the capability object.
+        :return: Returns a clone of this capability object.
+        """
+        return Capabilities(self._data)

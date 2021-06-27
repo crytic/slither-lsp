@@ -15,3 +15,6 @@ from slither_lsp.command_handlers.slither.analysis_create import AnalysisCreateH
 from slither_lsp.command_handlers.slither.analysis_delete import AnalysisDeleteHandler
 from slither_lsp.command_handlers.slither.get_detector_list import GetDetectorListHandler
 from slither_lsp.command_handlers.slither.run_detectors import RunDetectorsHandler
+
+# workspace
+from slither_lsp.command_handlers.workspace.did_change_workspace_folder import DidChangeWorkspaceFolderHandler

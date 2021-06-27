@@ -2,6 +2,7 @@ from enum import IntEnum
 from typing import Any, Union, Type
 
 # pylint: disable=invalid-name
+from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.commands.base_command import BaseCommand
 
 
@@ -65,19 +66,18 @@ class LSPError(Exception):
         super().__init__()
 
 
-class LSPCommandNotSupported(LSPError):
+class CapabilitiesNotSupportedError(LSPError):
     """
     Represents an exception which is thrown when a command (request/notification) is invoked but is not supported
     by the client or server.
     """
-    def __init__(self, message: str, code: LSPErrorCode = LSPErrorCode.InternalError, data: Any = None):
-        super().__init__(code, message, data)
-
-    @staticmethod
-    def from_command(command: Union[BaseCommand, Type[BaseCommand]]) -> 'LSPCommandNotSupported':
-        """
-        Generates a generic exception for a given command.
-        :param command: The command to create an exception for.
-        :return: Returns an instance of this exception.
-        """
-        return LSPCommandNotSupported(f"'{command.method_name}' is not supported due to client/server capabilities.")
+    def __init__(
+            self,
+            command_or_handler: Union[BaseCommand, Type[BaseCommand], BaseCommandHandler, Type[BaseCommandHandler]],
+            data: Any = None
+    ):
+        super().__init__(
+            LSPErrorCode.InternalError,
+            f"'{command_or_handler.method_name}' is not supported due to client/server capabilities.",
+            data
+        )

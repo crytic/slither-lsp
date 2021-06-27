@@ -3,18 +3,19 @@ from threading import Thread
 from typing import Optional
 
 from slither_lsp.servers.base_server import BaseServer
+from slither_lsp.state.capabilities import Capabilities
 
 
 class NetworkServer(BaseServer):
     """
     Provides a TCP network socket interface for JSON-RPC
     """
-    def __init__(self, port: int):
+    def __init__(self, port: int, server_capabilities: Capabilities = None):
         # Set our port and initialize our socket
         self.port = port
         self._server_socket: Optional[socket] = None
         self._thread: Optional[Thread] = None
-        super().__init__()
+        super().__init__(server_capabilities=server_capabilities)
 
     def start(self):
         """

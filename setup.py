@@ -10,6 +10,7 @@ setup(
     python_requires=">=3.6",
     install_requires=[
         "slither-analyzer>=0.8.0",
+        "pymitter>=0.3.1"
     ],
     dependency_links=[],
     license="AGPL-3.0",

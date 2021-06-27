@@ -2,7 +2,8 @@ from typing import Any, Optional
 
 from slither_lsp.commands.base_command import BaseCommand
 from slither_lsp.state.server_context import ServerContext
-from slither_lsp.errors.lsp_errors import LSPCommandNotSupported
+from slither_lsp.errors.lsp_errors import CapabilitiesNotSupportedError
+from slither_lsp.types.lsp_basic_structures import WorkspaceFolder
 
 
 class GetWorkspaceFoldersRequest(BaseCommand):
@@ -15,21 +16,16 @@ class GetWorkspaceFoldersRequest(BaseCommand):
     @classmethod
     def has_capabilities(cls, context: ServerContext) -> bool:
         """
-        Checks if the client and server have capabilities for this command.
+        Checks if the client has capabilities for this command.
         :param context: The server context which tracks state for the server.
-        :return: A boolean indicating whether the client and server have appropriate capabilities to run this command.
+        :return: A boolean indicating whether the client has appropriate capabilities to run this command.
         """
-        client_supported: bool = context.client_capabilities.get_from_path(
-            ['workspace', 'workspaceFolders'],
+        client_supported: bool = context.client_capabilities.get(
+            'workspace.workspaceFolders',
             default=False,
             enforce_type=bool
         )
-        server_supported: bool = context.server_capabilities.get_from_path(
-            ['workspace', 'workspaceFolders', 'supported'],
-            default=False,
-            enforce_type=bool
-        )
-        return client_supported and server_supported
+        return client_supported
 
     @classmethod
     def send(cls, context: ServerContext) -> Any:
@@ -42,10 +38,18 @@ class GetWorkspaceFoldersRequest(BaseCommand):
         """
         # Throw an exception if we don't support the underlying capabilities.
         if not cls.has_capabilities(context):
-            LSPCommandNotSupported.from_command(cls)
+            raise CapabilitiesNotSupportedError(cls)
 
         # Invoke the operation otherwise.
         workspace_folders = context.server.send_request_message(
-            cls.method_name, None
+            cls.method_name,
+            None
         )
+
+        # Verify our result is a list
+        if not isinstance(workspace_folders, list):
+            raise ValueError(f'{cls.method_name} request returned a non list type response.')
+
+        # Parse our data
+        workspace_folders = [WorkspaceFolder.from_dict(folder) for folder in workspace_folders]
         return workspace_folders

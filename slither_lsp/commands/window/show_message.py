@@ -1,8 +1,5 @@
-from typing import Any
-
 from slither_lsp.commands.base_command import BaseCommand
 from slither_lsp.state.server_context import ServerContext
-from slither_lsp.types.lsp_basic_structures import MessageType
 from slither_lsp.types.lsp_params import ShowMessageParams
 
 

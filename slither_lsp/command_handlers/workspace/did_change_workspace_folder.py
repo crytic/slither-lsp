@@ -1,11 +1,9 @@
-from typing import Any, Optional
+from typing import Any
 
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from slither_lsp.types.lsp_capabilities import ServerCapabilities, WorkspaceServerCapabilities, \
-    WorkspaceFoldersServerCapabilities
+from slither_lsp.errors.lsp_errors import CapabilitiesNotSupportedError
 from slither_lsp.state.server_context import ServerContext
-from slither_lsp.errors.lsp_errors import CapabilitiesNotSupportedError, LSPError, LSPErrorCode
-from slither_lsp.types.lsp_basic_structures import WorkspaceFolder
+from slither_lsp.types.lsp_params import DidChangeWorkspaceFoldersParams
 
 
 class DidChangeWorkspaceFolderHandler(BaseCommandHandler):
@@ -48,30 +46,14 @@ class DidChangeWorkspaceFolderHandler(BaseCommandHandler):
             raise CapabilitiesNotSupportedError(cls)
 
         # Validate the structure of our request
-        event: Optional[dict] = params.get('event')
-        if event is None:
-            raise LSPError(
-                LSPErrorCode.InvalidParams,
-                "'event' key was not provided.",
-                None
-            )
-
-        # Our event should have an added and removed array
-        added = event.get('added') or []
-        removed = event.get('removed') or []
-        if not (isinstance(added, list) or isinstance(removed, list)):
-            raise LSPError(
-                LSPErrorCode.InvalidParams,
-                "'added' and 'removed' values must be lists.",
-                None
-            )
-
-        # Parse each array
-        added = [WorkspaceFolder.from_dict(workspace_folder_info) for workspace_folder_info in added]
-        removed = [WorkspaceFolder.from_dict(workspace_folder_info) for workspace_folder_info in removed]
+        params: DidChangeWorkspaceFoldersParams = DidChangeWorkspaceFoldersParams.from_dict(params)
 
         # Emit relevant events
-        context.event_emitter.emit('workspace.didChangeWorkspaceFolders', added=added, removed=removed)
+        context.event_emitter.emit(
+            'workspace.didChangeWorkspaceFolders',
+            added=params.event.added,
+            removed=params.event.removed
+        )
 
         # This is a notification so we return nothing
         return None

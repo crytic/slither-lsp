@@ -101,7 +101,7 @@ class ServerCapabilities(SerializableStructure):
         of the item, where each key corresponds to the a dataclass field.
         :return: None
         """
-        workspace = source_dict.get('support')
+        workspace = source_dict.get('workspace')
         if workspace is not None:
             workspace = WorkspaceServerCapabilities.from_dict(workspace)
         init_args['workspace'] = workspace

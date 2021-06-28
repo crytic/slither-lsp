@@ -1,8 +1,8 @@
-from typing import Any, Optional, List
+from typing import List
 
 from slither_lsp.commands.base_command import BaseCommand
-from slither_lsp.state.server_context import ServerContext
 from slither_lsp.errors.lsp_errors import CapabilitiesNotSupportedError
+from slither_lsp.state.server_context import ServerContext
 from slither_lsp.types.lsp_basic_structures import WorkspaceFolder
 
 

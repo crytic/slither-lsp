@@ -364,3 +364,87 @@ class LogMessageParams(SerializableStructure):
 
         # Return the result.
         return result
+
+
+@dataclass
+class WorkspaceFoldersChangeEvent(SerializableStructure):
+    """
+    Data structure which represents workspace folder change event data.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspaceFoldersChangeEvent
+    """
+    # The array of added workspace folders
+    added: List[WorkspaceFolder]
+
+    # The array of the removed workspace folder
+    removed: List[WorkspaceFolder]
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        added_workspace_folders = source_dict.get('added')
+        if added_workspace_folders is not None and isinstance(added_workspace_folders, list):
+            added_workspace_folders = [
+                WorkspaceFolder.from_dict(workspace_folder)
+                for workspace_folder in added_workspace_folders
+            ]
+        init_args['added'] = added_workspace_folders
+
+        removed_workspace_folders = source_dict.get('removed')
+        if removed_workspace_folders is not None and isinstance(removed_workspace_folders, list):
+            removed_workspace_folders = [
+                WorkspaceFolder.from_dict(workspace_folder)
+                for workspace_folder in removed_workspace_folders
+            ]
+        init_args['removed'] = removed_workspace_folders
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        if self.added is not None and isinstance(self.added, list):
+            result['added'] = [folder.to_dict() for folder in self.added]
+        if self.removed is not None and isinstance(self.removed, list):
+            result['removed'] = [folder.to_dict() for folder in self.removed]
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class DidChangeWorkspaceFoldersParams(SerializableStructure):
+    """
+    Data structure which represents 'workspace/didChangeWorkspaceFolders' notifications.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#didChangeWorkspaceFoldersParams
+    """
+    # The actual workspace folder change event.
+    event: WorkspaceFoldersChangeEvent
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        event = source_dict.get('event')
+        if event is not None:
+            event = WorkspaceFoldersChangeEvent.from_dict(event)
+        init_args['event'] = event
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        raise NotImplementedError()

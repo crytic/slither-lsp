@@ -4,6 +4,7 @@ from slither_lsp.command_handlers.lifecycle.initialize import InitializeHandler
 from slither_lsp.command_handlers.lifecycle.initialized import InitializedHandler
 from slither_lsp.command_handlers.lifecycle.shutdown import ShutdownHandler
 from slither_lsp.command_handlers.lifecycle.exit import ExitHandler
+from slither_lsp.command_handlers.lifecycle.set_trace import SetTraceHandler
 
 # crytic-compile
 from slither_lsp.command_handlers.crytic_compile.autogenerate_standard_json import AutogenerateStandardJsonHandler

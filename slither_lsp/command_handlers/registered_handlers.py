@@ -19,3 +19,6 @@ from slither_lsp.command_handlers.slither.run_detectors import RunDetectorsHandl
 
 # workspace
 from slither_lsp.command_handlers.workspace.did_change_workspace_folder import DidChangeWorkspaceFolderHandler
+
+# language features
+from slither_lsp.command_handlers.text_document.go_to_declaration import GoToDeclarationHandler

@@ -4,8 +4,42 @@ from typing import Union, Any, Optional, List
 
 from slither_lsp.types.lsp_capabilities import ClientCapabilities, ServerCapabilities
 from slither_lsp.types.lsp_basic_structures import ClientServerInfo, TraceValue, WorkspaceFolder, MessageType, Range, \
-    Diagnostic
+    Diagnostic, TextDocumentIdentifier, Position
 from slither_lsp.types.base_serializable_structure import SerializableStructure
+
+
+@dataclass
+class PartialResultParams(SerializableStructure):
+    """
+    Data structure which represents a parameter literal used to pass a partial result token.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#partialResultParams
+    """
+    # An optional token that a server can use to report partial results (e.g. streaming) to the client.
+    partial_result_token: Union[str, int, None]
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['partial_result_token'] = source_dict.get('partialResultToken')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        if self.partial_result_token is not None:
+            result['partialResultToken'] = self.partial_result_token
+
+        # Return the result.
+        return result
 
 
 @dataclass
@@ -43,7 +77,7 @@ class WorkDoneProgressParams(SerializableStructure):
 
 
 @dataclass
-class InitializeParams(SerializableStructure):
+class InitializeParams(WorkDoneProgressParams):
     """
     Data structure which represents 'initialize' request parameters.
     References:
@@ -64,7 +98,6 @@ class InitializeParams(SerializableStructure):
     #
     # Uses IETF language tags as the value's syntax
     # (See https://en.wikipedia.org/wiki/IETF_language_tag)
-    #
     # @since 3.16.0
     locale: Optional[str]
 
@@ -94,7 +127,6 @@ class InitializeParams(SerializableStructure):
     # This property is only available if the client supports workspace folders.
     # It can be `null` if the client supports workspace folders but none are
     # configured.
-    #
     # @since 3.6.0
     workspace_folders: List[WorkspaceFolder]
 
@@ -106,6 +138,10 @@ class InitializeParams(SerializableStructure):
         of the item, where each key corresponds to the a dataclass field.
         :return: None
         """
+        # Read our base class data
+        WorkDoneProgressParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+
+        # Otherwise read our immediate data for this class
         init_args['process_id'] = source_dict.get('processId')
 
         client_info = source_dict.get('clientInfo')
@@ -491,6 +527,282 @@ class PublishDiagnosticsParams(SerializableStructure):
             result['version'] = self.version
         if self.diagnostics is not None and isinstance(self.diagnostics, list):
             result['diagnostics'] = [d.to_dict() for d in self.diagnostics]
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class TextDocumentPositionParams(SerializableStructure):
+    """
+    Data structure which represents 'initialize' request parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentPositionParams
+    """
+    # The text document
+    text_document: TextDocumentIdentifier
+
+    # The position inside the text document.
+    position: Position
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        # Read our text document identifier and position
+        text_document = source_dict.get('textDocument')
+        if text_document is not None:
+            text_document = TextDocumentIdentifier.from_dict(text_document)
+        init_args['text_document'] = text_document
+
+        position = source_dict.get('position')
+        if position is not None:
+            position = Position.from_dict(position)
+        init_args['position'] = position
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        if self.text_document is not None:
+            result['textDocument'] = self.text_document.to_dict()
+        if self.position is not None:
+            result['position'] = self.position.to_dict()
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class DeclarationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    """
+    Data structure which represents 'textDocument/declaration' request parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#declarationParams
+    """
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        # Read our base class values
+        PartialResultParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        WorkDoneProgressParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        TextDocumentPositionParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+
+        # Set our base class values
+        PartialResultParams.to_dict(self, result)
+        WorkDoneProgressParams.to_dict(self, result)
+        TextDocumentPositionParams.to_dict(self, result)
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class DefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    """
+    Data structure which represents 'textDocument/definition' request parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#definitionParams
+    """
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        # Read our base class values
+        PartialResultParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        WorkDoneProgressParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        TextDocumentPositionParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+
+        # Set our base class values
+        PartialResultParams.to_dict(self, result)
+        WorkDoneProgressParams.to_dict(self, result)
+        TextDocumentPositionParams.to_dict(self, result)
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class TypeDefinitionParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    """
+    Data structure which represents 'textDocument/typeDefinition' request parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#typeDefinitionParams
+    """
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        # Read our base class values
+        PartialResultParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        WorkDoneProgressParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        TextDocumentPositionParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+
+        # Set our base class values
+        PartialResultParams.to_dict(self, result)
+        WorkDoneProgressParams.to_dict(self, result)
+        TextDocumentPositionParams.to_dict(self, result)
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    """
+    Data structure which represents 'textDocument/implementation' request parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#implementationParams
+    """
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        # Read our base class values
+        PartialResultParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        WorkDoneProgressParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        TextDocumentPositionParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+
+        # Set our base class values
+        PartialResultParams.to_dict(self, result)
+        WorkDoneProgressParams.to_dict(self, result)
+        TextDocumentPositionParams.to_dict(self, result)
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class DocumentHighlightParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    """
+    Data structure which represents 'textDocument/documentHighlight' request parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#documentHighlightParams
+    """
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        # Read our base class values
+        PartialResultParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        WorkDoneProgressParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        TextDocumentPositionParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+
+        # Set our base class values
+        PartialResultParams.to_dict(self, result)
+        WorkDoneProgressParams.to_dict(self, result)
+        TextDocumentPositionParams.to_dict(self, result)
+
+        # Return the result.
+        return result
+
+
+@dataclass
+class MonikerParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
+    """
+    Data structure which represents 'textDocument/moniker' request parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#monikerParams
+    """
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        # Read our base class values
+        PartialResultParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        WorkDoneProgressParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+        TextDocumentPositionParams._init_args_from_dict(init_args=init_args, source_dict=source_dict)
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+
+        # Set our base class values
+        PartialResultParams.to_dict(self, result)
+        WorkDoneProgressParams.to_dict(self, result)
+        TextDocumentPositionParams.to_dict(self, result)
 
         # Return the result.
         return result

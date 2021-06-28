@@ -25,19 +25,20 @@ class DidChangeWorkspaceFolderHandler(BaseCommandHandler):
         """
 
         client_supported: bool = context.client_capabilities.workspace and \
-                                 context.client_capabilities.workspace.workspace_folders
+            context.client_capabilities.workspace.workspace_folders
         server_supported: bool = context.server_capabilities.workspace and \
-                                 context.server_capabilities.workspace.workspace_folders and \
-                                 context.server_capabilities.workspace.workspace_folders.supported
+            context.server_capabilities.workspace.workspace_folders and \
+            context.server_capabilities.workspace.workspace_folders.supported
         if not client_supported and server_supported:
             raise CapabilitiesNotSupportedError(cls)
 
     @classmethod
     def process(cls, context: ServerContext, params: Any) -> Any:
         """
-        Sends a 'workspace/workspaceFolders' request to the client to obtain workspace folders.
+        Handles a 'workspace/didChangeWorkspaceFolders' notification which indicates that workspace folders were added
+        or removed.
         References:
-            https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#window_showMessage
+            https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
         :param context: The server context which determines the server to use to send the message.
         :param params: The parameters object provided with this command.
         :return: None

@@ -2,10 +2,96 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, Union, List
 
 from slither_lsp.types.base_serializable_structure import SerializableStructure
+from slither_lsp.types.lsp_basic_structures import DiagnosticTag
 
 
 # region Server Capabilities
-from slither_lsp.types.lsp_basic_structures import DiagnosticTag
+
+
+@dataclass
+class WorkDoneProgressOptions(SerializableStructure):
+    """
+    Data structure which represents capabilities to see if work done progress can be tracked.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workDoneProgressOptions
+    """
+
+    work_done_progress: Optional[bool] = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['work_done_progress'] = source_dict.get('workDoneProgress')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+        if self.work_done_progress is not None:
+            result['workDoneProgress'] = self.work_done_progress
+        return result
+
+
+@dataclass
+class DeclarationOptions(WorkDoneProgressOptions):
+    """
+    Data structure which represents declaration options provided via capabilities.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#declarationOptions
+    """
+    # NOTE: This simply inherits from WorkDoneProgressOptions for now
+    pass
+
+
+@dataclass
+class DefinitionOptions(WorkDoneProgressOptions):
+    """
+    Data structure which represents definition options provided via capabilities.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#definitionOptions
+    """
+    # NOTE: This simply inherits from WorkDoneProgressOptions for now
+    pass
+
+
+@dataclass
+class TypeDefinitionOptions(WorkDoneProgressOptions):
+    """
+    Data structure which represents type definition options provided via capabilities.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#typeDefinitionOptions
+    """
+    # NOTE: This simply inherits from WorkDoneProgressOptions for now
+    pass
+
+
+@dataclass
+class ImplementationOptions(WorkDoneProgressOptions):
+    """
+    Data structure which represents implementation options provided via capabilities.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#implementationOptions
+    """
+    # NOTE: This simply inherits from WorkDoneProgressOptions for now
+    pass
+
+
+@dataclass
+class ReferenceOptions(WorkDoneProgressOptions):
+    """
+    Data structure which represents find reference options provided via capabilities.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#referenceOptions
+    """
+    # NOTE: This simply inherits from WorkDoneProgressOptions for now
+    pass
 
 
 @dataclass
@@ -93,6 +179,32 @@ class ServerCapabilities(SerializableStructure):
     References:
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#serverCapabilities
     """
+
+    # The server provides go to declaration support.
+    # @since 3.14.0
+    # TODO: Once we add DeclarationRegistrationOptions, we need to add logic for it here, as it should be another
+    #  possible value type for this field.
+    declaration_provider: Union[bool, DeclarationOptions, None] = None
+
+    # The server provides goto definition support.
+    definition_provider: Union[bool, DefinitionOptions, None] = None
+
+    # The server provides goto type definition support.
+    # @since 3.6.0
+    # TODO: Once we add TypeDefinitionRegistrationOptions, we need to add logic for it here, as it should be another
+    #  possible value type for this field.
+    type_definition_provider: Union[bool, TypeDefinitionOptions, None] = None
+
+    # The server provides goto implementation support.
+    # @since 3.6.0
+    # TODO: Once we add ImplementationRegistrationOptions, we need to add logic for it here, as it should be another
+    #  possible value type for this field.
+    implementation_provider: Union[bool, ImplementationOptions, None] = None
+
+    # The server provides find references support.
+    references_provider: Union[bool, ReferenceOptions, None] = None
+
+    # Workspace specific server capabilities
     workspace: Optional[WorkspaceServerCapabilities] = WorkspaceServerCapabilities()
 
     @classmethod
@@ -103,6 +215,42 @@ class ServerCapabilities(SerializableStructure):
         of the item, where each key corresponds to the a dataclass field.
         :return: None
         """
+        # Read declaration provider capabilities. If it's a dictionary, it likely represents a DeclarationOptions or
+        # DeclarationRegistrationOptions, otherwise, it should be a bool which we still accept.
+        declaration_provider = source_dict.get('declarationProvider')
+        if declaration_provider is not None and isinstance(declaration_provider, dict):
+            declaration_provider = DeclarationOptions.from_dict(declaration_provider)
+        init_args['declaration_provider'] = declaration_provider
+
+        # Read definitions provider capabilities. If it's a dictionary, it likely represents a DefinitionOptions.
+        # Otherwise, it should be a bool which we still accept.
+        definition_provider = source_dict.get('definitionProvider')
+        if definition_provider is not None and isinstance(definition_provider, dict):
+            definition_provider = DefinitionOptions.from_dict(definition_provider)
+        init_args['definition_provider'] = definition_provider
+
+        # Read type definition provider capabilities. If it's a dictionary, it likely represents TypeDefinitionOptions
+        # or TypeDefinitionRegistrationOptions. Otherwise, it should be a bool which we still accept.
+        type_definition_provider = source_dict.get('typeDefinitionProvider')
+        if type_definition_provider is not None and isinstance(type_definition_provider, dict):
+            type_definition_provider = TypeDefinitionOptions.from_dict(type_definition_provider)
+        init_args['type_definition_provider'] = type_definition_provider
+
+        # Read implementation provider capabilities. If it's a dictionary, it likely represents a ImplementationOptions
+        # or a ImplementationRegistrationOptions. Otherwise, it should be a bool which we still accept.
+        implementation_provider = source_dict.get('implementationProvider')
+        if implementation_provider is not None and isinstance(implementation_provider, dict):
+            implementation_provider = ImplementationOptions.from_dict(implementation_provider)
+        init_args['implementation_provider'] = implementation_provider
+
+        # Read find references provider capabilities. If it's a dictionary, it likely represents ReferenceOptions.
+        # Otherwise, it should be a bool which we still accept.
+        references_provider = source_dict.get('referencesProvider')
+        if references_provider is not None and isinstance(references_provider, dict):
+            references_provider = ReferenceOptions.from_dict(references_provider)
+        init_args['references_provider'] = references_provider
+
+        # Read workspace information
         workspace = source_dict.get('workspace')
         if workspace is not None:
             workspace = WorkspaceServerCapabilities.from_dict(workspace)
@@ -114,6 +262,43 @@ class ServerCapabilities(SerializableStructure):
         :return: Returns a dictionary object that represents an instance of this data.
         """
         result = result if result is not None else {}
+
+        # Declaration provider is handled accordingly based on type.
+        if self.declaration_provider is not None:
+            if isinstance(self.declaration_provider, bool):
+                result['declarationProvider'] = self.declaration_provider
+            elif isinstance(self.declaration_provider, DeclarationOptions):
+                result['declarationProvider'] = self.declaration_provider.to_dict()
+
+        # Definition provider is handled accordingly based on type.
+        if self.definition_provider is not None:
+            if isinstance(self.definition_provider, bool):
+                result['definitionProvider'] = self.definition_provider
+            elif isinstance(self.definition_provider, DefinitionOptions):
+                result['definitionProvider'] = self.definition_provider.to_dict()
+
+        # Type Definition provider is handled accordingly based on type.
+        if self.type_definition_provider is not None:
+            if isinstance(self.type_definition_provider, bool):
+                result['typeDefinitionProvider'] = self.type_definition_provider
+            elif isinstance(self.type_definition_provider, TypeDefinitionOptions):
+                result['typeDefinitionProvider'] = self.type_definition_provider.to_dict()
+
+        # Implementation provider is handled accordingly based on type.
+        if self.implementation_provider is not None:
+            if isinstance(self.implementation_provider, bool):
+                result['implementationProvider'] = self.implementation_provider
+            elif isinstance(self.implementation_provider, ImplementationOptions):
+                result['implementationProvider'] = self.implementation_provider.to_dict()
+
+        # Find references provider is handled accordingly based on type.
+        if self.references_provider is not None:
+            if isinstance(self.references_provider, bool):
+                result['referencesProvider'] = self.references_provider
+            elif isinstance(self.references_provider, ReferenceOptions):
+                result['referencesProvider'] = self.references_provider.to_dict()
+
+        # Output our workspace information
         if self.workspace is not None:
             result['workspace'] = self.workspace.to_dict()
         return result
@@ -163,14 +348,12 @@ class WindowClientCapabilities(SerializableStructure):
     # Whether client supports handling progress notifications. If set
     # servers are allowed to report in `workDoneProgress` property in the
     # request specific server capabilities.
-    #
     # @since 3.15.0
     work_done_progress: Optional[bool] = None
 
     # TODO: showMessage
 
     # Client capabilities for the show document request.
-    #
     # @since 3.16.0
     show_document: Optional[ShowDocumentClientCapabilities] = None
 
@@ -251,26 +434,21 @@ class PublishDiagnosticsClientCapabilities(SerializableStructure):
 
     # Client supports the tag property to provide meta data about a diagnostic.
     # Clients supporting tags have to handle unknown tags gracefully.
-    #
     # @since 3.15.0
-    tag_support: Optional[PublishDiagnosticsTagSupportClientCapabilities] = \
-        PublishDiagnosticsTagSupportClientCapabilities()
+    tag_support: Optional[PublishDiagnosticsTagSupportClientCapabilities] = None
 
     # Whether the client interprets the version property of the
     # `textDocument/publishDiagnostics` notification's parameter.
-    #
     # @since 3.15.0
     version_support: Optional[bool] = None
 
     # Client supports a codeDescription property
-    #
     # @since 3.16.0
     code_description_support: Optional[bool] = None
 
     # Whether code action supports the `data` property which is
     # preserved between a `textDocument/publishDiagnostics` and
     # `textDocument/codeAction` request.
-    #
     # @since 3.16.0
     data_support: Optional[bool] = None
 
@@ -315,14 +493,19 @@ class PublishDiagnosticsClientCapabilities(SerializableStructure):
 
 
 @dataclass
-class TextDocumentClientCapabilities(SerializableStructure):
+class DeclarationClientCapabilities(SerializableStructure):
     """
-     Data structure which represents text document specific client capabilities.
+     Data structure which contains capabilities specific to the 'textDocument/declaration' request.
      References:
          https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentClientCapabilities
     """
-    # Capabilities specific to the `textDocument/publishDiagnostics` notification.
-    publish_diagnostics: Optional[PublishDiagnosticsClientCapabilities] = PublishDiagnosticsClientCapabilities()
+    # Whether declaration supports dynamic registration. If this is set to
+    # `true` the client supports the new `DeclarationRegistrationOptions`
+    # return value for the corresponding server capability as well.
+    dynamic_registration: Optional[bool] = None
+
+    # The client supports additional metadata in the form of declaration links.
+    link_support: Optional[bool] = None
 
     @classmethod
     def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
@@ -332,6 +515,242 @@ class TextDocumentClientCapabilities(SerializableStructure):
         of the item, where each key corresponds to the a dataclass field.
         :return: None
         """
+        init_args['dynamic_registration'] = source_dict.get('dynamicRegistration')
+        init_args['link_support'] = source_dict.get('linkSupport')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.dynamic_registration is not None:
+            result['valueSet'] = self.dynamic_registration
+        if self.link_support is not None:
+            result['linkSupport'] = self.link_support
+
+        return result
+
+
+@dataclass
+class DefinitionClientCapabilities(SerializableStructure):
+    """
+     Data structure which contains capabilities specific to the 'textDocument/definition' request.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#definitionClientCapabilities
+    """
+    # Whether definition supports dynamic registration.
+    dynamic_registration: Optional[bool] = None
+
+    # The client supports additional metadata in the form of definition links.
+    # @since 3.14.0
+    link_support: Optional[bool] = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['dynamic_registration'] = source_dict.get('dynamicRegistration')
+        init_args['link_support'] = source_dict.get('linkSupport')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.dynamic_registration is not None:
+            result['valueSet'] = self.dynamic_registration
+        if self.link_support is not None:
+            result['linkSupport'] = self.link_support
+
+        return result
+
+
+@dataclass
+class TypeDefinitionClientCapabilities(SerializableStructure):
+    """
+     Data structure which contains capabilities specific to the 'textDocument/typeDefinition' request.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#typeDefinitionClientCapabilities
+    """
+    # Whether implementation supports dynamic registration. If this is set to
+    # `true` the client supports the new `TypeDefinitionRegistrationOptions`
+    # return value for the corresponding server capability as well.
+    dynamic_registration: Optional[bool] = None
+
+    # The client supports additional metadata in the form of definition links.
+    # @since 3.14.0
+    link_support: Optional[bool] = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['dynamic_registration'] = source_dict.get('dynamicRegistration')
+        init_args['link_support'] = source_dict.get('linkSupport')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.dynamic_registration is not None:
+            result['valueSet'] = self.dynamic_registration
+        if self.link_support is not None:
+            result['linkSupport'] = self.link_support
+
+        return result
+
+
+@dataclass
+class ImplementationClientCapabilities(SerializableStructure):
+    """
+     Data structure which contains capabilities specific to the 'textDocument/implementation' request.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#implementationClientCapabilities
+    """
+    # Whether implementation supports dynamic registration. If this is set to
+    # `true` the client supports the new `ImplementationRegistrationOptions`
+    # return value for the corresponding server capability as well.
+    dynamic_registration: Optional[bool] = None
+
+    # The client supports additional metadata in the form of definition links.
+    # @since 3.14.0
+    link_support: Optional[bool] = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['dynamic_registration'] = source_dict.get('dynamicRegistration')
+        init_args['link_support'] = source_dict.get('linkSupport')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.dynamic_registration is not None:
+            result['valueSet'] = self.dynamic_registration
+        if self.link_support is not None:
+            result['linkSupport'] = self.link_support
+
+        return result
+
+
+@dataclass
+class ReferenceClientCapabilities(SerializableStructure):
+    """
+     Data structure which contains capabilities specific to the 'textDocument/references' request.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#referenceClientCapabilities
+    """
+    # Whether references supports dynamic registration.
+    dynamic_registration: Optional[bool] = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['dynamic_registration'] = source_dict.get('dynamicRegistration')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.dynamic_registration is not None:
+            result['valueSet'] = self.dynamic_registration
+
+        return result
+
+
+@dataclass
+class TextDocumentClientCapabilities(SerializableStructure):
+    """
+     Data structure which represents text document specific client capabilities.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentClientCapabilities
+    """
+    # Capabilities specific to the `textDocument/declaration` request.
+    # @since 3.14.0
+    declaration: Optional[DeclarationClientCapabilities] = None
+
+    # Capabilities specific to the `textDocument/definition` request.
+    definition: Optional[DefinitionClientCapabilities] = None
+
+    # Capabilities specific to the `textDocument/typeDefinition` request.
+    # @since 3.6.0
+    type_definition: Optional[TypeDefinitionClientCapabilities] = None
+
+    # Capabilities specific to the `textDocument/implementation` request.
+    # @since 3.6.0
+    implementation: Optional[ImplementationClientCapabilities] = None
+
+    # Capabilities specific to the `textDocument/references` request.
+    references: Optional[ReferenceClientCapabilities] = None
+
+    # Capabilities specific to the `textDocument/publishDiagnostics` notification.
+    publish_diagnostics: Optional[PublishDiagnosticsClientCapabilities] = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        declaration = source_dict.get('declaration')
+        if declaration is not None:
+            declaration = DeclarationClientCapabilities.from_dict(declaration)
+        init_args['declaration'] = declaration
+
+        definition = source_dict.get('definition')
+        if definition is not None:
+            definition = DefinitionClientCapabilities.from_dict(definition)
+        init_args['definition'] = definition
+
+        type_definition = source_dict.get('typeDefinition')
+        if type_definition is not None:
+            type_definition = TypeDefinitionClientCapabilities.from_dict(type_definition)
+        init_args['type_definition'] = type_definition
+
+        implementation = source_dict.get('implementation')
+        if implementation is not None:
+            implementation = ImplementationClientCapabilities.from_dict(implementation)
+        init_args['implementation'] = implementation
+
+        references = source_dict.get('references')
+        if references is not None:
+            references = ReferenceClientCapabilities.from_dict(references)
+        init_args['references'] = references
+
         publish_diagnostics = source_dict.get('publishDiagnostics')
         if publish_diagnostics is not None:
             publish_diagnostics = PublishDiagnosticsClientCapabilities.from_dict(publish_diagnostics)
@@ -343,6 +762,17 @@ class TextDocumentClientCapabilities(SerializableStructure):
         :return: Returns a dictionary object that represents an instance of this data.
         """
         result = result if result is not None else {}
+
+        if self.declaration is not None:
+            result['declaration'] = self.declaration.to_dict()
+        if self.definition is not None:
+            result['definition'] = self.definition.to_dict()
+        if self.type_definition is not None:
+            result['typeDefinition'] = self.type_definition.to_dict()
+        if self.implementation is not None:
+            result['implementation'] = self.implementation.to_dict()
+        if self.references is not None:
+            result['references'] = self.references.to_dict()
 
         if self.publish_diagnostics is not None:
             result['publishDiagnostics'] = self.publish_diagnostics.to_dict()
@@ -365,12 +795,10 @@ class WorkspaceClientCapabilities(SerializableStructure):
     # TODO: workspaceEdit, didChangeConfiguration, didChangeWatchedFiles, symbol, executeCommand
 
     # The client has support for workspace folders.
-    #
     # @since 3.6.0
     workspace_folders: Optional[bool] = None
 
     # The client supports `workspace/configuration` requests.
-    #
     # @since 3.6.0
     configuration: Optional[bool] = None
 

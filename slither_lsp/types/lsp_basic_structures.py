@@ -663,6 +663,38 @@ class AnnotatedTextEdit(TextEdit):
         return result
 
 
+@dataclass
+class TextDocumentIdentifier(TextEdit):
+    """
+    Data structure which represents a text document identifier (uri).
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentIdentifier
+    """
+
+    # The actual annotation identifier.
+    uri: str
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['uri'] = source_dict.get('uri')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['uri'] = self.uri
+        return result
+
+
 class TraceValue(Enum):
     """
     Defines the level of verbosity to trace server actions with.

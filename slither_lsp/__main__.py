@@ -69,10 +69,13 @@ def main() -> None:
         pass
     from slither_lsp.commands.workspace.get_workspace_folders import GetWorkspaceFoldersRequest
     from slither_lsp.commands.window.log_message import LogMessageNotification
-    from slither_lsp.types.lsp_basic_structures import MessageType
+    from slither_lsp.types.lsp_basic_structures import MessageType, Diagnostic, Range, Position
     from slither_lsp.types.lsp_params import ShowDocumentParams, LogMessageParams, ShowMessageParams
     from slither_lsp.commands.window.show_message import ShowMessageNotification
     from slither_lsp.commands.window.show_document import ShowDocumentRequest
+    from slither_lsp.commands.text_document.publish_diagnostics import PublishDiagnosticsNotification, \
+        PublishDiagnosticsParams
+
     folders = GetWorkspaceFoldersRequest.send(server.context)
     LogMessageNotification.send(server.context, LogMessageParams(MessageType.WARNING, "TEST LOGGED MSG!"))
     ShowMessageNotification.send(server.context, ShowMessageParams(MessageType.ERROR, "TEST SHOWN MSG!"))
@@ -80,6 +83,19 @@ def main() -> None:
         server.context,ShowDocumentParams(
             r'file:///C:/Users/X/Documents/GitHub/testcontracts/compact.ast',
             take_focus=True, external=None, selection=None
+        )
+    )
+    PublishDiagnosticsNotification.send(
+        server.context,
+        PublishDiagnosticsParams(
+            uri="TEST.BLAH",
+            version=None,
+            diagnostics=[
+                Diagnostic(
+                    message="test diagnostic message",
+                    range=Range(Position(0, 0), Position(0, 0)),
+                )
+            ]
         )
     )
     f = folders

@@ -1,10 +1,12 @@
-from dataclasses import dataclass
-from typing import Any, Optional, Union
+from dataclasses import dataclass, field
+from typing import Any, Optional, Union, List
 
 from slither_lsp.types.base_serializable_structure import SerializableStructure
 
 
 # region Server Capabilities
+from slither_lsp.types.lsp_basic_structures import DiagnosticTag
+
 
 @dataclass
 class WorkspaceFoldersServerCapabilities(SerializableStructure):
@@ -202,6 +204,153 @@ class WindowClientCapabilities(SerializableStructure):
 
 
 @dataclass
+class PublishDiagnosticsTagSupportClientCapabilities(SerializableStructure):
+    """
+     Data structure which contains tag support information ('tagSupport' in 'PublishDiagnosticsClientCapabilities')
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#publishDiagnosticsClientCapabilities
+    """
+    # Whether the clients accepts diagnostics with related information.
+    value_set: List[DiagnosticTag] = field(default_factory=list)
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        value_set: List[int] = source_dict.get('valueSet')
+        if value_set is not None:
+            value_set = [DiagnosticTag(v) for v in value_set]
+        init_args['value_set'] = value_set
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.value_set is not None:
+            result['valueSet'] = self.value_set
+
+        return result
+
+
+@dataclass
+class PublishDiagnosticsClientCapabilities(SerializableStructure):
+    """
+     Data structure which represents text document specific client capabilities.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#publishDiagnosticsClientCapabilities
+    """
+    # Whether the clients accepts diagnostics with related information.
+    related_information: Optional[bool] = None
+
+    # Client supports the tag property to provide meta data about a diagnostic.
+    # Clients supporting tags have to handle unknown tags gracefully.
+    #
+    # @since 3.15.0
+    tag_support: Optional[PublishDiagnosticsTagSupportClientCapabilities] = \
+        PublishDiagnosticsTagSupportClientCapabilities()
+
+    # Whether the client interprets the version property of the
+    # `textDocument/publishDiagnostics` notification's parameter.
+    #
+    # @since 3.15.0
+    version_support: Optional[bool] = None
+
+    # Client supports a codeDescription property
+    #
+    # @since 3.16.0
+    code_description_support: Optional[bool] = None
+
+    # Whether code action supports the `data` property which is
+    # preserved between a `textDocument/publishDiagnostics` and
+    # `textDocument/codeAction` request.
+    #
+    # @since 3.16.0
+    data_support: Optional[bool] = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['related_information'] = source_dict.get('relatedInformation')
+
+        tag_support = source_dict.get('tagSupport')
+        if tag_support is not None:
+            tag_support = PublishDiagnosticsTagSupportClientCapabilities.from_dict(tag_support)
+        init_args['tag_support'] = tag_support
+
+        init_args['version_support'] = source_dict.get('versionSupport')
+        init_args['code_description_support'] = source_dict.get('codeDescriptionSupport')
+        init_args['data_support'] = source_dict.get('dataSupport')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.related_information is not None:
+            result['relatedInformation'] = self.related_information
+        if self.tag_support is not None:
+            result['tagSupport'] = self.tag_support.to_dict()
+        if self.version_support is not None:
+            result['versionSupport'] = self.version_support
+        if self.code_description_support is not None:
+            result['codeDescriptionSupport'] = self.code_description_support
+        if self.data_support is not None:
+            result['dataSupport'] = self.data_support
+
+        return result
+
+
+@dataclass
+class TextDocumentClientCapabilities(SerializableStructure):
+    """
+     Data structure which represents text document specific client capabilities.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentClientCapabilities
+    """
+    # Capabilities specific to the `textDocument/publishDiagnostics` notification.
+    publish_diagnostics: Optional[PublishDiagnosticsClientCapabilities] = PublishDiagnosticsClientCapabilities()
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        publish_diagnostics = source_dict.get('publishDiagnostics')
+        if publish_diagnostics is not None:
+            publish_diagnostics = PublishDiagnosticsClientCapabilities.from_dict(publish_diagnostics)
+        init_args['publish_diagnostics'] = publish_diagnostics
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.publish_diagnostics is not None:
+            result['publishDiagnostics'] = self.publish_diagnostics.to_dict()
+
+        return result
+
+
+@dataclass
 class WorkspaceClientCapabilities(SerializableStructure):
     """
      Data structure which represents workspace specific client capabilities.
@@ -275,6 +424,9 @@ class ClientCapabilities(SerializableStructure):
     # Window specific client capabilities.
     window: Optional[WindowClientCapabilities] = WindowClientCapabilities()
 
+    # Text document specific client capabilities.
+    text_document: Optional[TextDocumentClientCapabilities] = TextDocumentClientCapabilities()
+
     @classmethod
     def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
@@ -293,6 +445,11 @@ class ClientCapabilities(SerializableStructure):
             window = WindowClientCapabilities.from_dict(window)
         init_args['window'] = window
 
+        text_document = source_dict.get('textDocument')
+        if text_document is not None:
+            text_document = TextDocumentClientCapabilities.from_dict(text_document)
+        init_args['text_document'] = text_document
+
     def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
@@ -304,6 +461,8 @@ class ClientCapabilities(SerializableStructure):
             result['workspace'] = self.workspace.to_dict()
         if self.window is not None:
             result['window'] = self.window.to_dict()
+        if self.text_document is not None:
+            result['textDocument'] = self.text_document.to_dict()
 
         return result
 

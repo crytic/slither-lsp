@@ -29,7 +29,7 @@ class ClientServerInfo(SerializableStructure):
     name: str
 
     # The client/server's version as defined by itself.
-    version: Optional[str]
+    version: Optional[str] = None
 
     @classmethod
     def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
@@ -85,7 +85,7 @@ class WorkspaceFolder(SerializableStructure):
 
     # The name of the workspace folder. Used to refer to this
     # workspace folder in the user interface.
-    name: Optional[str]
+    name: Optional[str] = None
 
     @classmethod
     def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
@@ -226,11 +226,6 @@ class LocationLink(SerializableStructure):
     References:
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#locationLink
     """
-    # Span of the origin of the link.
-    # Used as the underlined span for mouse interaction. Defaults to the word
-    # range at the mouse position.
-    origin_selection_range: Optional[Range]
-
     # The target resource identifier of this link.
     target_uri: str
 
@@ -244,6 +239,11 @@ class LocationLink(SerializableStructure):
     # followed, e.g the name of a function. Must be contained by the the
     # `targetRange`. See also `DocumentSymbol#range`
     target_selection_range: Range
+
+    # Span of the origin of the link.
+    # Used as the underlined span for mouse interaction. Defaults to the word
+    # range at the mouse position.
+    origin_selection_range: Optional[Range] = None
 
     @classmethod
     def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
@@ -389,34 +389,34 @@ class Diagnostic(SerializableStructure):
     # The range at which the message applies.
     range: Range
 
-    # The diagnostic's severity. Can be omitted. If omitted it is up to the
-    # client to interpret diagnostics as error, warning, info or hint.
-    severity: Optional[DiagnosticSeverity]
-
-    # The diagnostic's code, which might appear in the user interface.
-    code: Union[int, str, None]
-
-    # An optional property to describe the error code.
-    code_description: Optional[CodeDescription]
-
-    # A human-readable string describing the source of this
-    # diagnostic, e.g. 'typescript' or 'super lint'.
-    source: Optional[str]
-
     # The diagnostic's message.
     message: str
 
+    # The diagnostic's severity. Can be omitted. If omitted it is up to the
+    # client to interpret diagnostics as error, warning, info or hint.
+    severity: Optional[DiagnosticSeverity] = None
+
+    # The diagnostic's code, which might appear in the user interface.
+    code: Union[int, str, None] = None
+
+    # An optional property to describe the error code.
+    code_description: Optional[CodeDescription] = None
+
+    # A human-readable string describing the source of this
+    # diagnostic, e.g. 'typescript' or 'super lint'.
+    source: Optional[str] = None
+
     # Additional metadata about the diagnostic.
-    tags: Optional[List[DiagnosticTag]]
+    tags: Optional[List[DiagnosticTag]] = None
 
     # An array of related diagnostic information, e.g. when symbol-names within
     # a scope collide all definitions can be marked via this property.
-    related_information: Optional[List[DiagnosticRelatedInformation]]
+    related_information: Optional[List[DiagnosticRelatedInformation]] = None
 
     # A data entry field that is preserved between a
     # `textDocument/publishDiagnostics` notification and
     # `textDocument/codeAction` request.
-    data: Any
+    data: Any = None
 
     @classmethod
     def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
@@ -498,7 +498,7 @@ class Command(SerializableStructure):
     command: str
 
     # Arguments that the command handler should be invoked with
-    arguments: Optional[List[Any]]
+    arguments: Optional[List[Any]] = None
 
     @classmethod
     def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
@@ -583,11 +583,11 @@ class ChangeAnnotation(SerializableStructure):
 
     # A flag which indicates that user confirmation is needed
     # before applying the change.
-    needs_confirmation: Optional[bool]
+    needs_confirmation: Optional[bool] = None
 
     # A human-readable string which is rendered less prominent in
     # the user interface.
-    description: Optional[str]
+    description: Optional[str] = None
 
     @classmethod
     def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:

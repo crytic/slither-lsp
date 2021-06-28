@@ -13,9 +13,15 @@ class ShowDocumentRequest(BaseCommand):
     method_name = 'window/showDocument'
 
     @classmethod
-    def has_capabilities(cls, context: ServerContext) -> bool:
-        return context.client_capabilities.window and context.client_capabilities.window.show_document and \
-               context.client_capabilities.window.show_document.support
+    def _check_capabilities(cls, context: ServerContext) -> None:
+        """
+        Checks if the client has capabilities for this command. Throws a CapabilitiesNotSupportedError if it does not.
+        :param context: The server context which tracks state for the server.
+        :return: None
+        """
+        if not context.client_capabilities.window and context.client_capabilities.window.show_document and \
+                context.client_capabilities.window.show_document.support:
+            raise CapabilitiesNotSupportedError(cls)
 
     @classmethod
     def send(cls, context: ServerContext, params: ShowDocumentParams) -> Any:
@@ -27,9 +33,8 @@ class ShowDocumentRequest(BaseCommand):
         :param params: The parameters needed to send the request.
         """
 
-        # Throw an exception if we don't support the underlying capabilities.
-        if not cls.has_capabilities(context):
-            raise CapabilitiesNotSupportedError(cls)
+        # Verify we have appropriate capabilities.
+        cls._check_capabilities(context)
 
         # Send the created notification.
         response: dict = context.server.send_request_message(cls.method_name, params.to_dict())

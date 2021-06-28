@@ -17,11 +17,11 @@ class DidChangeWorkspaceFolderHandler(BaseCommandHandler):
     method_name = "workspace/didChangeWorkspaceFolders"
 
     @classmethod
-    def has_capabilities(cls, context: ServerContext) -> bool:
+    def _check_capabilities(cls, context: ServerContext) -> None:
         """
-        Checks if the client and server have capabilities for this command.
+        Checks if the client has capabilities for this command. Throws a CapabilitiesNotSupportedError if it does not.
         :param context: The server context which tracks state for the server.
-        :return: A boolean indicating whether the client and server have appropriate capabilities to run this command.
+        :return: None
         """
 
         client_supported: bool = context.client_capabilities.workspace and \
@@ -29,7 +29,8 @@ class DidChangeWorkspaceFolderHandler(BaseCommandHandler):
         server_supported: bool = context.server_capabilities.workspace and \
                                  context.server_capabilities.workspace.workspace_folders and \
                                  context.server_capabilities.workspace.workspace_folders.supported
-        return client_supported and server_supported
+        if not client_supported and server_supported:
+            raise CapabilitiesNotSupportedError(cls)
 
     @classmethod
     def process(cls, context: ServerContext, params: Any) -> Any:
@@ -41,9 +42,8 @@ class DidChangeWorkspaceFolderHandler(BaseCommandHandler):
         :param params: The parameters object provided with this command.
         :return: None
         """
-        # Throw an exception if we don't support the underlying capabilities.
-        if not cls.has_capabilities(context):
-            raise CapabilitiesNotSupportedError(cls)
+        # Verify we have appropriate capabilities
+        cls._check_capabilities(context)
 
         # Validate the structure of our request
         params: DidChangeWorkspaceFoldersParams = DidChangeWorkspaceFoldersParams.from_dict(params)

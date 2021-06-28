@@ -1,5 +1,5 @@
 from enum import IntEnum
-from typing import Any, Union, Type
+from typing import Any, Union, Type, Optional
 
 # pylint: disable=invalid-name
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
@@ -74,10 +74,17 @@ class CapabilitiesNotSupportedError(LSPError):
     def __init__(
             self,
             command_or_handler: Union[BaseCommand, Type[BaseCommand], BaseCommandHandler, Type[BaseCommandHandler]],
-            data: Any = None
+            data: Any = None,
+            additional_text: Optional[str] = None
     ):
+        # Construct our message
+        text = f"'{command_or_handler.method_name}' is not supported due to client/server capabilities."
+        if additional_text is not None:
+            text += " " + additional_text
+
+        # Constructor our underlying LSP Error.
         super().__init__(
             LSPErrorCode.InternalError,
-            f"'{command_or_handler.method_name}' is not supported due to client/server capabilities.",
+            text,
             data
         )

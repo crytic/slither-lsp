@@ -1,9 +1,10 @@
 # pylint: disable=duplicate-code
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Union, Any, Optional, List
 
 from slither_lsp.types.lsp_capabilities import ClientCapabilities, ServerCapabilities
-from slither_lsp.types.lsp_basic_structures import ClientServerInfo, TraceValue, WorkspaceFolder, MessageType, Range
+from slither_lsp.types.lsp_basic_structures import ClientServerInfo, TraceValue, WorkspaceFolder, MessageType, Range, \
+    Diagnostic
 from slither_lsp.types.base_serializable_structure import SerializableStructure
 
 
@@ -448,3 +449,48 @@ class DidChangeWorkspaceFoldersParams(SerializableStructure):
         :return: Returns a dictionary object that represents an instance of this data.
         """
         raise NotImplementedError()
+
+
+@dataclass
+class PublishDiagnosticsParams(SerializableStructure):
+
+    """
+    Data structure which represents 'textDocument/publishDiagnostics' notifications.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#publishDiagnosticsParams
+    """
+    uri: str
+    version: Optional[int] = None
+    diagnostics: List[Diagnostic] = field(default_factory=list)
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['uri'] = source_dict.get('uri')
+        init_args['version'] = source_dict.get('version')
+
+        diagnostics = source_dict.get('diagnostics')
+        if diagnostics is not None:
+            diagnostics = [Diagnostic.from_dict(d) for d in diagnostics]
+        init_args['diagnostics'] = diagnostics
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['uri'] = self.uri
+        if self.version is not None:
+            result['version'] = self.version
+        if self.diagnostics is not None and isinstance(self.diagnostics, list):
+            result['diagnostics'] = [d.to_dict() for d in self.diagnostics]
+
+        # Return the result.
+        return result

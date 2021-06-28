@@ -3,7 +3,7 @@ from threading import Thread
 from typing import Optional
 
 from slither_lsp.servers.base_server import BaseServer
-from slither_lsp.state.capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import Capabilities
 
 
 class NetworkServer(BaseServer):

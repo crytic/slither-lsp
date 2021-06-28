@@ -5,22 +5,26 @@ from typing import Optional, Any, Union, List
 
 # These structures ideally would just be dataclass objects, so we could cast dictionaries to dataclasses.
 # However, dataclasses cannot initialize with unexpected parameters, and we can't assume the Language Server
-# Protocol won't change and add more keys. So we handle parsing ourselves for now.
+# Protocol won't change and add more keys. So we add our own serializing/deserializing methods on top of
+# this while still reaping benefits of auto-constructor generation, parameter validation, etc from dataclass.
 # See more at the link below:
 # https://microsoft.github.io/language-server-protocol/specifications/specification-current/#basic-json-structures
 
 # Text documents have a defined EOL.
 # https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocuments
+from slither_lsp.types.base_serializable_structure import SerializableStructure
+
 EOL = ['\n', '\r\n', '\r']
 
 
 @dataclass
-class ClientServerInfo:
+class ClientServerInfo(SerializableStructure):
     """
     Data structure which describes a client/server by name and version.
     References:
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#initialize
     """
+
     # The name of the client/server as defined by itself.
     name: str
 
@@ -28,25 +32,26 @@ class ClientServerInfo:
     version: Optional[str]
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'ClientServerInfo':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        name: str = obj.get('name')
-        version: Optional[str] = obj.get('version')
-        return cls(name=name, version=version)
+        init_args['name'] = source_dict.get('name')
+        init_args['version'] = source_dict.get('version')
 
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
+        # Create a result dictionary if we don't have one
+        result = result if result is not None else {}
+
         # Set our mandatory fields
-        result = {
-            "name": self.name
-        }
+        result['name'] = self.name
 
         # Set optional fields
         if self.version is not None:
@@ -69,7 +74,7 @@ class MessageType(IntEnum):
 
 
 @dataclass
-class WorkspaceFolder:
+class WorkspaceFolder(SerializableStructure):
     """
     Data structure which describes a workspace folder by name and location (uri).
     References:
@@ -83,29 +88,32 @@ class WorkspaceFolder:
     name: Optional[str]
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'WorkspaceFolder':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        uri: str = obj.get('uri')
-        name: str = obj.get('name')
-        return cls(uri=uri, name=name)
+        init_args['uri'] = source_dict.get('uri')
+        init_args['name'] = source_dict.get('name')
 
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        return {
-            'uri': self.uri,
-            'name': self.name
-        }
+        # Create a result dictionary if we don't have one
+        result = result if result is not None else {}
+
+        # Set our values and return the result
+        result['uri'] = self.uri
+        result['name'] = self.name
+        return result
 
 
 @dataclass
-class Position:
+class Position(SerializableStructure):
     """
     Data structure which represents a position within a text file by line number and character index (column).
     References:
@@ -123,29 +131,30 @@ class Position:
     character: int
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'Position':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        line: int = obj.get('line')
-        character: int = obj.get('character')
-        return cls(line=line, character=character)
+        init_args['line'] = source_dict.get('line')
+        init_args['character'] = source_dict.get('character')
 
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        return {
-            'line': self.line,
-            'character': self.character
-        }
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['line'] = self.line
+        result['character'] = self.character
+        return result
 
 
 @dataclass
-class Range:
+class Range(SerializableStructure):
     """
     Data structure which represents a position range in a text file.
     References:
@@ -155,29 +164,30 @@ class Range:
     end: Position
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'Range':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        start = Position.from_dict(obj.get('start'))
-        end = Position.from_dict(obj.get('end'))
-        return cls(start=start, end=end)
+        init_args['start'] = Position.from_dict(source_dict.get('start'))
+        init_args['end'] = Position.from_dict(source_dict.get('end'))
 
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        return {
-            'start': self.start.to_dict(),
-            'end': self.end.to_dict()
-        }
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['start'] = self.start.to_dict()
+        result['end'] = self.end.to_dict()
+        return result
 
 
 @dataclass
-class Location:
+class Location(SerializableStructure):
     """
     Data structure which represents a text file location (file uri and position range).
     References:
@@ -187,29 +197,30 @@ class Location:
     range: Range
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'Location':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        location_uri: str = obj.get('uri')
-        location_range = Range.from_dict(obj.get('range'))
-        return cls(uri=location_uri, range=location_range)
+        init_args['uri'] = source_dict.get('uri')
+        init_args['range'] = Range.from_dict(source_dict.get('range'))
 
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        return {
-            'uri': self.uri,
-            'range': self.range.to_dict()
-        }
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['uri'] = self.uri
+        result['range'] = self.range.to_dict()
+        return result
 
 
 @dataclass
-class LocationLink:
+class LocationLink(SerializableStructure):
     """
     Data structure which represents a link between a source and target destination.
     References:
@@ -235,37 +246,34 @@ class LocationLink:
     target_selection_range: Range
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'LocationLink':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        # Parse the optional origin selection range
-        ll_origin_selection_range: dict = obj.get('originSelectionRange')
+        # Read our optional selection range
+        ll_origin_selection_range: dict = source_dict.get('originSelectionRange')
         ll_origin_selection_range: Optional[Range] = \
             Range.from_dict(ll_origin_selection_range) if ll_origin_selection_range is not None else None
 
-        # Parse the remainder of our variables
-        ll_target_uri = obj.get('targetUri')
-        ll_target_range = Range.from_dict(obj.get('targetRange'))
-        ll_target_selection_range = Range.from_dict(obj.get('targetSelectionRange'))
-        return cls(
-            origin_selection_range=ll_origin_selection_range, target_uri=ll_target_uri, target_range=ll_target_range,
-            target_selection_range=ll_target_selection_range
-        )
+        # Read the remainder of our fields
+        init_args['origin_selection_range'] = ll_origin_selection_range
+        init_args['target_uri'] = source_dict.get('targetUri')
+        init_args['target_range'] = Range.from_dict(source_dict.get('targetRange'))
+        init_args['target_selection_range'] = Range.from_dict(source_dict.get('targetSelectionRange'))
 
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        # Set our mandatory fields
-        result = {
-            'targetUri': self.target_uri,
-            'targetRange': self.target_range.to_dict(),
-            'targetSelectionRange': self.target_selection_range.to_dict(),
-        }
+        # Create a result dictionary if we don't have one and set our mandatory fields.
+        result = result if result is not None else {}
+        result['targetUri'] = self.target_uri
+        result['targetRange'] = self.target_range.to_dict()
+        result['targetSelectionRange'] = self.target_selection_range.to_dict()
 
         # Set optional fields
         if self.origin_selection_range is not None:
@@ -306,7 +314,7 @@ class DiagnosticTag(IntEnum):
 
 
 @dataclass
-class DiagnosticRelatedInformation:
+class DiagnosticRelatedInformation(SerializableStructure):
     """
     Data structure which represents a related message and source code location for a diagnostic.
     This should be used to point to code locations that cause or are related to a diagnostic, e.g when duplicating a
@@ -318,29 +326,30 @@ class DiagnosticRelatedInformation:
     message: str
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'DiagnosticRelatedInformation':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        location: Location = Location.from_dict(obj.get('location'))
-        message: str = obj.get('message')
-        return cls(location=location, message=message)
+        init_args['location'] = Location.from_dict(source_dict.get('location'))
+        init_args['message'] = source_dict.get('message')
 
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        return {
-            'location': self.location.to_dict(),
-            'message': self.message
-        }
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['location'] = self.location.to_dict()
+        result['message'] = self.message
+        return result
 
 
 @dataclass
-class CodeDescription:
+class CodeDescription(SerializableStructure):
     """
     Data structure which represents a description for an error code.
     References:
@@ -349,27 +358,28 @@ class CodeDescription:
     href: str
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'CodeDescription':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        href: str = obj.get('href')
-        return cls(href=href)
+        init_args['href'] = source_dict.get('href')
 
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        return {
-            'href': self.href
-        }
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['href'] = self.href
+        return result
 
 
 @dataclass
-class Diagnostic:
+class Diagnostic(SerializableStructure):
     """
     Data structure which represents a diagnostic (compiler error, warning, etc). Diagnostic objects are only valid
     in the scope of a resource.
@@ -409,55 +419,50 @@ class Diagnostic:
     data: Any
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'Diagnostic':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        d_range: Range = Range.from_dict(obj.get('range'))
+        init_args['range'] = Range.from_dict(source_dict.get('range'))
 
-        d_severity: Optional[int] = obj.get('severity')
-        d_severity: Optional[DiagnosticSeverity] = DiagnosticSeverity(d_severity) if d_severity is not None else None
+        d_severity: Optional[int] = source_dict.get('severity')
+        init_args['severity'] = DiagnosticSeverity(d_severity) if d_severity is not None else None
 
-        d_code: Union[int, str, None] = obj.get('code')
+        init_args['code'] = source_dict.get('code')
 
-        d_code_description: Optional[dict] = obj.get('codeDescription')
-        d_code_description: Optional[CodeDescription] = \
+        d_code_description: Optional[dict] = source_dict.get('codeDescription')
+        init_args['code_description'] = \
             CodeDescription.from_dict(d_code_description) if d_code_description is not None else None
 
-        d_source: Optional[str] = obj.get('source')
-        d_message: str = obj.get('message')
+        init_args['source'] = source_dict.get('source')
+        init_args['message'] = source_dict.get('message')
 
-        d_tags: Optional[List[int]] = obj.get('tags')
-        d_tags: Optional[List[DiagnosticTag]] = \
+        d_tags: Optional[List[int]] = source_dict.get('tags')
+        init_args['tags'] = \
             [DiagnosticTag(d_tag) for d_tag in d_tags] \
             if d_tags is not None and isinstance(d_tags, list) \
             else None
 
-        d_related_information: Optional[List[dict]] = obj.get('relatedInformation')
-        d_related_information: Optional[List[DiagnosticRelatedInformation]] = \
+        d_related_information: Optional[List[dict]] = source_dict.get('relatedInformation')
+        init_args['related_information'] = \
             [DiagnosticRelatedInformation.from_dict(info_item) for info_item in d_related_information] \
             if d_related_information is not None and isinstance(d_related_information, list) \
             else None
 
-        d_data: Any = obj.get('data')
+        init_args['data'] = source_dict.get('data')
 
-        return cls(
-            range=d_range, severity=d_severity, code=d_code, code_description=d_code_description, source=d_source,
-            message=d_message, tags=d_tags, related_information=d_related_information, data=d_data
-        )
-
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        # Set our mandatory fields
-        result = {
-            'range': self.range.to_dict(),
-            'message': self.message
-        }
+        # Create a result dictionary if we don't have one and set our mandatory fields
+        result = result if result is not None else {}
+        result['range'] = self.range.to_dict()
+        result['message'] = self.message
 
         # Set optional fields
         if self.severity is not None:
@@ -480,7 +485,7 @@ class Diagnostic:
 
 
 @dataclass
-class Command:
+class Command(SerializableStructure):
     """
     Data structure which represents a command which can be registered on the client side to be invoked on the server.
     References:
@@ -496,28 +501,26 @@ class Command:
     arguments: Optional[List[Any]]
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'Command':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        title: str = obj.get('title')
-        command: str = obj.get('command')
-        arguments: Optional[List[Any]] = obj.get('arguments')
+        init_args['title'] = source_dict.get('title')
+        init_args['command'] = source_dict.get('command')
+        init_args['arguments'] = source_dict.get('arguments')
 
-        return cls(title=title, command=command, arguments=arguments)
-
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        # Set our mandatory fields
-        result = {
-            'title': self.title,
-            'command': self.command
-        }
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['title'] = self.title
+        result['command'] = self.command
 
         # Set optional fields
         if self.arguments is not None:
@@ -528,7 +531,7 @@ class Command:
 
 
 @dataclass
-class TextEdit:
+class TextEdit(SerializableStructure):
     """
     Data structure which represents a textual edit applicable to a text document.
     References:
@@ -543,34 +546,32 @@ class TextEdit:
     new_text: str
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'TextEdit':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        te_range = Range.from_dict(obj.get('range'))
-        te_new_text: str = obj.get('newText')
+        init_args['range'] = Range.from_dict(source_dict.get('range'))
+        init_args['new_text'] = source_dict.get('newText')
 
-        return cls(range=te_range, new_text=te_new_text)
-
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        # Set our mandatory fields
-        result = {
-            'range': self.range.to_dict(),
-            'newText': self.new_text
-        }
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['range'] = self.range.to_dict()
+        result['newText'] = self.new_text
 
         # Return the result.
         return result
 
 
 @dataclass
-class ChangeAnnotation:
+class ChangeAnnotation(SerializableStructure):
     """
     Data structure which represents additional information regarding document changes.
     References:
@@ -589,27 +590,25 @@ class ChangeAnnotation:
     description: Optional[str]
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'ChangeAnnotation':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        label: str = obj.get('label')
-        needs_confirmation: Optional[bool] = obj.get('needsConfirmation')
-        description: Optional[str] = obj.get('description')
+        init_args['label'] = source_dict.get('label')
+        init_args['needs_confirmation'] = source_dict.get('needsConfirmation')
+        init_args['description'] = source_dict.get('description')
 
-        return cls(label=label, needs_confirmation=needs_confirmation, description=description)
-
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        # Set our mandatory fields
-        result = {
-            'label': self.label
-        }
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+        result['label'] = self.label
 
         # Set optional fields
         if self.needs_confirmation is not None:
@@ -633,25 +632,29 @@ class AnnotatedTextEdit(TextEdit):
     annotation_id: str
 
     @classmethod
-    def from_dict(cls, obj: dict) -> 'AnnotatedTextEdit':
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        Parses the provided object into an instance of the class.
-        :param obj: The dictionary object to parse this structure from.
-        :return: Returns an instance of the class.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
         """
-        ate_range = Range.from_dict(obj.get('range'))
-        ate_new_text: str = obj.get('newText')
-        ate_annotation_id = obj.get('annotationId')
+        # Initialize our baseclass arguments.
+        TextEdit._init_args_from_dict(init_args=init_args, source_dict=source_dict)
 
-        return cls(range=ate_range, new_text=ate_new_text, annotation_id=ate_annotation_id)
+        # Parse our annotation id
+        init_args['annotation_id'] = source_dict.get('annotationId')
 
-    def to_dict(self) -> Any:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
         Dumps an instance of this class to a dictionary object.
         :return: Returns a dictionary object that represents an instance of this data.
         """
-        # Set our base fields
-        result = super().to_dict()
+        # Create a result dictionary if we don't have one and set our fields
+        result = result if result is not None else {}
+
+        # Set our base fields to this result dict
+        TextEdit.to_dict(self, result)
 
         # Set our additional fields
         result['annotationId'] = self.annotation_id

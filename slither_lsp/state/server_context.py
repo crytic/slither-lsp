@@ -1,11 +1,10 @@
-from typing import Callable, Dict, List, Optional, Any
+from typing import Dict, List, Optional
 
 from pkg_resources import require
 from slither import Slither
 
-from slither_lsp.state.capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import Capabilities
 from slither_lsp.types.lsp_basic_structures import WorkspaceFolder, ClientServerInfo, TraceValue
-from pymitter import EventEmitter
 
 
 class ServerContext:

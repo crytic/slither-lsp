@@ -1,7 +1,7 @@
 from typing import Any, Optional
 
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from slither_lsp.state.capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import Capabilities
 from slither_lsp.state.server_context import ServerContext
 from slither_lsp.errors.lsp_errors import CapabilitiesNotSupportedError, LSPError, LSPErrorCode
 from slither_lsp.types.lsp_basic_structures import WorkspaceFolder

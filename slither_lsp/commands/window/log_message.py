@@ -1,6 +1,6 @@
 from slither_lsp.commands.base_command import BaseCommand
 from slither_lsp.state.server_context import ServerContext
-from slither_lsp.types.lsp_basic_structures import MessageType
+from slither_lsp.types.lsp_params import LogMessageParams
 
 
 class LogMessageNotification(BaseCommand):
@@ -10,20 +10,13 @@ class LogMessageNotification(BaseCommand):
     method_name = 'window/logMessage'
 
     @classmethod
-    def send(cls, context: ServerContext, message_type: MessageType, message: str) -> None:
+    def send(cls, context: ServerContext, params: LogMessageParams) -> None:
         """
         Sends a 'window/logMessage' notification to the client.
         References:
             https://microsoft.github.io/language-server-protocol/specifications/specification-3-16/#window_logMessage
         :param context: The server context which determines the server to use to send the message.
-        :param message_type: The severity/level of the message to show.
-        :param message: The message the client should log.
+        :param params: The parameters needed to send the request.
         :return: None
         """
-        context.server.send_notification_message(
-            cls.method_name,
-            {
-                'type': int(message_type),
-                'message': message
-            }
-        )
+        context.server.send_notification_message(cls.method_name, params.to_dict())

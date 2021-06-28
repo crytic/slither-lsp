@@ -1,4 +1,8 @@
+from abc import ABC
+from dataclasses import dataclass
 from typing import Any, List, Optional, Union
+
+from slither_lsp.types.base_serializable_structure import SerializableStructure
 
 
 class Capabilities:
@@ -99,3 +103,33 @@ class Capabilities:
         :return: Returns a clone of this capability object.
         """
         return Capabilities(self._data)
+
+
+@dataclass
+class ShowDocumentClientCapabilities(SerializableStructure):
+    """
+    Data structure which represents capabilities for the request to display a document.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#window_showDocument
+    """
+    # The client has support for the show document request.
+    support: bool
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['support'] = source_dict.get('support')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+        result['support'] = self.support
+        return result

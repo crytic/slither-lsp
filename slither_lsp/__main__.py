@@ -4,7 +4,7 @@ import logging
 
 from slither_lsp.servers.console_server import ConsoleServer
 from slither_lsp.servers.network_server import NetworkServer
-from slither_lsp.state.capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import Capabilities
 
 logging.basicConfig()
 logging.getLogger("slither_lsp").setLevel(logging.INFO)
@@ -57,6 +57,26 @@ def main() -> None:
 
     # Begin processing command_handlers
     server.start()
+
+    # TODO: Remove these tests.
+    while not server.context or not server.context.client_initialized:
+        pass
+    from slither_lsp.commands.workspace.get_workspace_folders import GetWorkspaceFoldersRequest
+    from slither_lsp.commands.window.log_message import LogMessageNotification
+    from slither_lsp.types.lsp_basic_structures import MessageType
+    from slither_lsp.types.lsp_params import ShowDocumentParams, LogMessageParams, ShowMessageParams
+    from slither_lsp.commands.window.show_message import ShowMessageNotification
+    from slither_lsp.commands.window.show_document import ShowDocumentRequest
+    folders = GetWorkspaceFoldersRequest.send(server.context)
+    LogMessageNotification.send(server.context, LogMessageParams(MessageType.WARNING, "TEST LOGGED MSG!"))
+    ShowMessageNotification.send(server.context, ShowMessageParams(MessageType.ERROR, "TEST SHOWN MSG!"))
+    shown_doc = ShowDocumentRequest.send(
+        server.context,ShowDocumentParams(
+            r'file:///C:/Users/X/Documents/GitHub/testcontracts/compact.ast',
+            take_focus=True, external=None, selection=None
+        )
+    )
+    f = folders
 
 
 if __name__ == "__main__":

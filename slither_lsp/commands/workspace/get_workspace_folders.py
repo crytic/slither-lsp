@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any, Optional, List
 
 from slither_lsp.commands.base_command import BaseCommand
 from slither_lsp.state.server_context import ServerContext
@@ -28,7 +28,7 @@ class GetWorkspaceFoldersRequest(BaseCommand):
         return client_supported
 
     @classmethod
-    def send(cls, context: ServerContext) -> Any:
+    def send(cls, context: ServerContext) -> List[WorkspaceFolder]:
         """
         Sends a 'workspace/workspaceFolders' request to the client to obtain workspace folders.
         References:

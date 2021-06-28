@@ -1,8 +1,8 @@
 import inspect
 import traceback
-from threading import Lock, Thread
+from threading import Lock
 from time import sleep
-from typing import Any, Callable, Dict, IO, Optional, Type, Tuple, Union
+from typing import Any, Dict, IO, Optional, Type, Union
 
 from pymitter import EventEmitter
 
@@ -11,7 +11,7 @@ from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.command_handlers.lifecycle.exit import ExitHandler
 from slither_lsp.errors.lsp_errors import LSPError, LSPErrorCode
 from slither_lsp.io.jsonrpc_io import JsonRpcIo
-from slither_lsp.state.capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import Capabilities
 from slither_lsp.state.server_context import ServerContext
 
 # Register all imported command handlers so we have a lookup of method name -> handler

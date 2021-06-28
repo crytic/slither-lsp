@@ -3,7 +3,7 @@ import sys
 from typing import List, Optional, TextIO
 
 from slither_lsp.servers.base_server import BaseServer
-from slither_lsp.state.capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import Capabilities
 
 
 class NullStringIO(io.StringIO):

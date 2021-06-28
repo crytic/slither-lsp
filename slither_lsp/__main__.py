@@ -4,7 +4,8 @@ import logging
 
 from slither_lsp.servers.console_server import ConsoleServer
 from slither_lsp.servers.network_server import NetworkServer
-from slither_lsp.types.lsp_capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import ServerCapabilities, WorkspaceServerCapabilities, \
+    WorkspaceFoldersServerCapabilities
 
 logging.basicConfig()
 logging.getLogger("slither_lsp").setLevel(logging.INFO)
@@ -43,9 +44,14 @@ def main() -> None:
     args = parse_args()
 
     # Create our capabilities object to determine what capabilities we want this application to have.
-    server_capabilities: Capabilities = Capabilities()
-    from slither_lsp.command_handlers.workspace.did_change_workspace_folder import DidChangeWorkspaceFolderHandler
-    DidChangeWorkspaceFolderHandler.enable_server_capabilities(server_capabilities, True)
+    server_capabilities: ServerCapabilities = ServerCapabilities(
+        workspace=WorkspaceServerCapabilities(
+            workspace_folders=WorkspaceFoldersServerCapabilities(
+                supported=True,
+                change_notifications=True
+            )
+        )
+    )
 
     # Determine which server provider to use.
     if args.port:

@@ -1,7 +1,8 @@
 from typing import Any, Optional
 
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from slither_lsp.types.lsp_capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import ServerCapabilities, WorkspaceServerCapabilities, \
+    WorkspaceFoldersServerCapabilities
 from slither_lsp.state.server_context import ServerContext
 from slither_lsp.errors.lsp_errors import CapabilitiesNotSupportedError, LSPError, LSPErrorCode
 from slither_lsp.types.lsp_basic_structures import WorkspaceFolder
@@ -18,35 +19,18 @@ class DidChangeWorkspaceFolderHandler(BaseCommandHandler):
     method_name = "workspace/didChangeWorkspaceFolders"
 
     @classmethod
-    def enable_server_capabilities(cls, capabilities: Capabilities, change_notifications: bool) -> None:
-        """
-        Enables capabilities on a server Capabilities object to signal our interest in workspace folder changes.
-        :param capabilities: The server capabilities to modify.
-        :param change_notifications: A boolean indicating whether we want the client to notify us of changes to
-        workspace folders.
-        :return: None
-        """
-        capabilities.set('workspace.workspaceFolders.supported', True)
-        if change_notifications:
-            capabilities.set('workspace.workspaceFolders.changeNotifications', True)
-
-    @classmethod
     def has_capabilities(cls, context: ServerContext) -> bool:
         """
         Checks if the client and server have capabilities for this command.
         :param context: The server context which tracks state for the server.
         :return: A boolean indicating whether the client and server have appropriate capabilities to run this command.
         """
-        client_supported: bool = context.client_capabilities.get(
-            'workspace.workspaceFolders',
-            default=False,
-            enforce_type=bool
-        )
-        server_supported: bool = context.server_capabilities.get(
-            'workspace.workspaceFolders.supported',
-            default=False,
-            enforce_type=bool
-        )
+
+        client_supported: bool = context.client_capabilities.workspace and \
+                                 context.client_capabilities.workspace.workspace_folders
+        server_supported: bool = context.server_capabilities.workspace and \
+                                 context.server_capabilities.workspace.workspace_folders and \
+                                 context.server_capabilities.workspace.workspace_folders.supported
         return client_supported and server_supported
 
     @classmethod

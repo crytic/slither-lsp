@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 from typing import Union, Any, Optional, List
 
-from slither_lsp.types.lsp_capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import ClientCapabilities, ServerCapabilities
 from slither_lsp.types.lsp_basic_structures import ClientServerInfo, TraceValue, WorkspaceFolder, MessageType, Range
 from slither_lsp.types.base_serializable_structure import SerializableStructure
 
@@ -84,7 +84,7 @@ class InitializeParams(SerializableStructure):
     initialization_options: Any
 
     # The capabilities provided by the client (editor or tool)
-    capabilities: Capabilities
+    capabilities: ClientCapabilities
 
     # The initial trace setting. If omitted trace is disabled ('off').
     trace: Optional[TraceValue]
@@ -117,7 +117,7 @@ class InitializeParams(SerializableStructure):
         init_args['root_uri'] = source_dict.get('rootUri')
         init_args['initialization_options'] = source_dict.get('initializationOptions')
 
-        init_args['capabilities'] = Capabilities(source_dict.get('capabilities'))
+        init_args['capabilities'] = ClientCapabilities.from_dict(source_dict.get('capabilities'))
 
         trace_level = source_dict.get('trace')
         if trace_level is not None and isinstance(trace_level, str):
@@ -149,7 +149,7 @@ class InitializeResult(SerializableStructure):
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#initializeResult
     """
     # The capabilities the language server provides.
-    capabilities: Capabilities
+    capabilities: ServerCapabilities
 
     # Information about the server.
     server_info: Optional[ClientServerInfo]
@@ -171,7 +171,7 @@ class InitializeResult(SerializableStructure):
         """
         # Create a result dictionary if we don't have one and set our fields
         result = result if result is not None else {}
-        result['capabilities'] = self.capabilities.data
+        result['capabilities'] = self.capabilities.to_dict()
         if self.server_info is not None:
             result['serverInfo'] = self.server_info.to_dict()
 

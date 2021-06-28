@@ -20,12 +20,7 @@ class GetWorkspaceFoldersRequest(BaseCommand):
         :param context: The server context which tracks state for the server.
         :return: A boolean indicating whether the client has appropriate capabilities to run this command.
         """
-        client_supported: bool = context.client_capabilities.get(
-            'workspace.workspaceFolders',
-            default=False,
-            enforce_type=bool
-        )
-        return client_supported
+        return context.client_capabilities.workspace and context.client_capabilities.workspace.workspace_folders
 
     @classmethod
     def send(cls, context: ServerContext) -> List[WorkspaceFolder]:

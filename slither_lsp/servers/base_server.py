@@ -11,7 +11,7 @@ from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.command_handlers.lifecycle.exit import ExitHandler
 from slither_lsp.errors.lsp_errors import LSPError, LSPErrorCode
 from slither_lsp.io.jsonrpc_io import JsonRpcIo
-from slither_lsp.types.lsp_capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import ServerCapabilities
 from slither_lsp.state.server_context import ServerContext
 
 # Register all imported command handlers so we have a lookup of method name -> handler
@@ -30,14 +30,14 @@ class BaseServer:
     """
     TODO:
     """
-    def __init__(self, server_capabilities: Capabilities):
+    def __init__(self, server_capabilities: ServerCapabilities):
         self.running: bool = False
         self.context: Optional[ServerContext] = None
         self.io: Optional[JsonRpcIo] = None
         self._pending_response_queue: Dict[Union[int, str], Optional[Any]] = {}
         self._current_server_request_id = 0
         self._request_lock = Lock()
-        self._init_server_capabilities: Capabilities = server_capabilities
+        self._init_server_capabilities: ServerCapabilities = server_capabilities
 
         # Create our main event emitter
         self.event_emitter = EventEmitter()

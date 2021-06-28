@@ -3,7 +3,7 @@ from typing import Dict, List, Optional
 from pkg_resources import require
 from slither import Slither
 
-from slither_lsp.types.lsp_capabilities import Capabilities
+from slither_lsp.types.lsp_capabilities import ClientCapabilities, ServerCapabilities
 from slither_lsp.types.lsp_basic_structures import WorkspaceFolder, ClientServerInfo, TraceValue
 
 
@@ -19,8 +19,8 @@ class ServerContext:
         self.trace: TraceValue = TraceValue.OFF
         self.server: base_server.BaseServer = server
         self.client_info: Optional[ClientServerInfo] = None
-        self.client_capabilities: Capabilities = Capabilities()
-        self.server_capabilities: Capabilities = server_capabilities or Capabilities()
+        self.client_capabilities: ClientCapabilities = ClientCapabilities()
+        self.server_capabilities: ServerCapabilities = server_capabilities or ServerCapabilities()
         self.workspace_folders: List[WorkspaceFolder] = []
 
         # Create our analysis results structure

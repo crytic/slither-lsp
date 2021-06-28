@@ -14,6 +14,13 @@ class SerializableStructure(ABC):
         """
         pass
 
+    def clone(self) -> 'SerializableStructure':
+        """
+        Creates a clone of the serializable object.
+        :return: Returns a clone of this structured object.
+        """
+        return self.from_dict(self.to_dict())
+
     @classmethod
     def from_dict(cls, obj: dict) -> 'SerializableStructure':
         """

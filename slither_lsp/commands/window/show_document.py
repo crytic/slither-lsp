@@ -16,18 +16,8 @@ class ShowDocumentRequest(BaseCommand):
 
     @classmethod
     def has_capabilities(cls, context: ServerContext) -> bool:
-        # Attempt to obtain our client capabilities
-        client_supported: Optional[dict] = context.client_capabilities.get(
-            'window.showDocument',
-            default=None,
-            enforce_type=dict
-        )
-
-        # If we obtained capabilities, parse them and return our status, otherwise indicate we do not support these
-        # capabilities.
-        if client_supported is not None:
-            return ShowDocumentClientCapabilities.from_dict(client_supported).support
-        return False
+        return context.client_capabilities.window and context.client_capabilities.window.show_document and \
+               context.client_capabilities.window.show_document.support
 
     @classmethod
     def send(cls, context: ServerContext, params: ShowDocumentParams) -> Any:

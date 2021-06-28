@@ -1,109 +1,125 @@
-from abc import ABC
 from dataclasses import dataclass
-from typing import Any, List, Optional, Union
+from typing import Any, Optional, Union
 
 from slither_lsp.types.base_serializable_structure import SerializableStructure
 
 
-class Capabilities:
+# region Server Capabilities
+
+@dataclass
+class WorkspaceFoldersServerCapabilities(SerializableStructure):
     """
-    Capabilities wrapper for the internal capabilities object.
+    Data structure which represents workspace folder specific server capabilities.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspaceFoldersServerCapabilities
     """
-    def __init__(self, data: dict = None):
+    # The server has support for workspace folders
+    supported: Optional[bool] = None
+
+    # Whether the server wants to receive workspace folder
+    # change notifications.
+    #
+    # If a string is provided, the string is treated as an ID
+    # under which the notification is registered on the client
+    # side. The ID can be used to unregister for these events
+    # using the `client/unregisterCapability` request.
+    change_notifications: Union[str, bool, None] = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
         """
-        The constructor for the capabilities object.
-        :param data: The underlying client/server capabilities object.
-        """
-        # Initialize our capabilities with this data
-        if data is None:
-            self._data = {}
-        else:
-            self._data = data
-
-    def get(self, path: Union[str, List[str]], default: Any = None, enforce_type: Optional[type] = None) -> Any:
-        """
-        Obtains a value from the internal capability data at the given path. If it does not exist, the default value
-        provided is returned.
-        :param path: The key path to obtain a value from in the internal capability data.
-        :param default: The default value to return if no value at the key path exists.
-        :param enforce_type: An optional type to enforce on the return value, otherwise the default value is returned.
-        :return: Returns the value at the given key path in the internal capability data, otherwise returns the
-        default value.
-        """
-        # If the path is a string, delimit it with '.'
-        if isinstance(path, str):
-            path = path.split('.')
-
-        # Iterate over our path until we arrive at our destination.
-        result = self._data
-
-        for key in path:
-            # If the key in this part of the path doesn't exist, neither does our value
-            if key not in result:
-                return default
-
-            # Verify this is a dictionary before we try to obtain the value at this path
-            if not isinstance(result, dict):
-                return default
-
-            # Obtain the value for this key.
-            result = result.get(key)
-
-        # If we're enforcing type and this is the wrong type, return a default value instead.
-        if enforce_type is not None and not isinstance(result, enforce_type):
-            return default
-
-        # Return our result
-        return result
-
-    def set(self, path: Union[str, List[str]], value: Any) -> None:
-        """
-        Sets a value in the internal capability data at the given path. If the path does not exist, dictionaries are
-        created for every key before the value is finally placed at the correct location.
-        :param path: The key path to set a value at in the internal capability data.
-        :param value: Sets the value at the given key path in the internal capability data.
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
         :return: None
         """
-        # If the path is a string, delimit it with '.'
-        if isinstance(path, str):
-            path = path.split('.')
+        init_args['supported'] = source_dict.get('supported')
+        init_args['change_notifications'] = source_dict.get('changeNotifications')
 
-        # Iterate over our path until we arrive at our destination.
-        result = self._data
-
-        for i, key in enumerate(path):
-            # If the key in this part of the path doesn't exist, create a dictionary here
-            if key not in result:
-                result[key] = {}
-
-            # Verify this is a dictionary before we try to obtain the value at this path
-            if not isinstance(result, dict):
-                raise ValueError(
-                    "Could not set value at key path because a key-value pair was not a dictionary as expected."
-                )
-
-            # If this isn't the last item, iterate, otherwise, set our value
-            if i < len(path) - 1:
-                result = result.get(key)
-            else:
-                result[key] = value
-                return
-
-    @property
-    def data(self) -> dict:
+    def to_dict(self, result: Optional[dict] = None) -> Any:
         """
-        The internal capability data which this object represents.
-        :return: Returns the internal capability data.
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
         """
-        return self._data
+        result = result if result is not None else {}
+        if self.supported is not None:
+            result['supported'] = self.supported
+        if self.change_notifications is not None:
+            result['changeNotifications'] = self.change_notifications
+        return result
 
-    def clone(self) -> 'Capabilities':
-        """
-        Clones the capability object.
-        :return: Returns a clone of this capability object.
-        """
-        return Capabilities(self._data)
 
+@dataclass
+class WorkspaceServerCapabilities(SerializableStructure):
+    """
+    Data structure which represents workspace specific server capabilities.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#serverCapabilities
+    """
+    workspace_folders: Optional[WorkspaceFoldersServerCapabilities] = WorkspaceFoldersServerCapabilities()
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        workspace_folders = source_dict.get('workspaceFolders')
+        if workspace_folders is not None:
+            workspace_folders = WorkspaceFoldersServerCapabilities.from_dict(workspace_folders)
+        init_args['workspace_folders'] = workspace_folders
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.workspace_folders is not None:
+            result['workspaceFolders'] = self.workspace_folders.to_dict()
+
+        return result
+
+
+@dataclass
+class ServerCapabilities(SerializableStructure):
+    """
+    Data structure which represents capabilities a server supports.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#serverCapabilities
+    """
+    workspace: Optional[WorkspaceServerCapabilities] = WorkspaceServerCapabilities()
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        workspace = source_dict.get('support')
+        if workspace is not None:
+            workspace = WorkspaceServerCapabilities.from_dict(workspace)
+        init_args['workspace'] = workspace
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+        if self.workspace is not None:
+            result['workspace'] = self.workspace.to_dict()
+        return result
+
+# endregion
+
+
+# region Client Capabilities
 
 @dataclass
 class ShowDocumentClientCapabilities(SerializableStructure):
@@ -113,7 +129,7 @@ class ShowDocumentClientCapabilities(SerializableStructure):
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#window_showDocument
     """
     # The client has support for the show document request.
-    support: bool
+    support: bool = False
 
     @classmethod
     def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
@@ -133,3 +149,162 @@ class ShowDocumentClientCapabilities(SerializableStructure):
         result = result if result is not None else {}
         result['support'] = self.support
         return result
+
+
+@dataclass
+class WindowClientCapabilities(SerializableStructure):
+    """
+     Data structure which represents window specific client capabilities.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#clientCapabilities
+    """
+    # Whether client supports handling progress notifications. If set
+    # servers are allowed to report in `workDoneProgress` property in the
+    # request specific server capabilities.
+    #
+    # @since 3.15.0
+    work_done_progress: Optional[bool] = None
+
+    # TODO: showMessage
+
+    # Client capabilities for the show document request.
+    #
+    # @since 3.16.0
+    show_document: Optional[ShowDocumentClientCapabilities] = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['work_done_progress'] = source_dict.get('workDoneProgress')
+        show_document = source_dict.get('showDocument')
+        if show_document is not None:
+            show_document = ShowDocumentClientCapabilities.from_dict(show_document)
+        init_args['show_document'] = show_document
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.work_done_progress is not None:
+            result['workDoneProgress'] = self.work_done_progress
+        if self.show_document is not None:
+            result['showDocument'] = self.show_document.to_dict()
+
+        return result
+
+
+@dataclass
+class WorkspaceClientCapabilities(SerializableStructure):
+    """
+     Data structure which represents workspace specific client capabilities.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#clientCapabilities
+     """
+    # The client supports applying batch edits
+    # to the workspace by supporting the request
+    # 'workspace/applyEdit'
+    apply_edit: Optional[bool] = None
+
+    # TODO: workspaceEdit, didChangeConfiguration, didChangeWatchedFiles, symbol, executeCommand
+
+    # The client has support for workspace folders.
+    #
+    # @since 3.6.0
+    workspace_folders: Optional[bool] = None
+
+    # The client supports `workspace/configuration` requests.
+    #
+    # @since 3.6.0
+    configuration: Optional[bool] = None
+
+    # TODO: semanticTokens, codeLens, fileOperations, textDocument, window, general,
+
+    # Experimental client capabilities.
+    experimental: Any = None
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        init_args['apply_edit'] = source_dict.get('applyEdit')
+        init_args['workspace_folders'] = source_dict.get('workspaceFolders')
+        init_args['configuration'] = source_dict.get('configuration')
+        init_args['experimental'] = source_dict.get('experimental')
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.apply_edit is not None:
+            result['applyEdit'] = self.apply_edit
+        if self.workspace_folders is not None:
+            result['workspaceFolders'] = self.workspace_folders
+        if self.configuration is not None:
+            result['configuration'] = self.configuration
+        if self.experimental is not None:
+            result['experimental'] = self.experimental
+
+        return result
+
+
+@dataclass
+class ClientCapabilities(SerializableStructure):
+    """
+    Data structure which represents capabilities a client supports.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#clientCapabilities
+    """
+    # Workspace specific client capabilities.
+    workspace: Optional[WorkspaceClientCapabilities] = WorkspaceClientCapabilities()
+
+    # Window specific client capabilities.
+    window: Optional[WindowClientCapabilities] = WindowClientCapabilities()
+
+    @classmethod
+    def _init_args_from_dict(cls, init_args: dict, source_dict: dict) -> None:
+        """
+        Parses dataclass arguments into an argument dictionary which is used to instantiate the underlying class.
+        :param init_args: The arguments dictionary which this function populates, to be later used to create an instance
+        of the item, where each key corresponds to the a dataclass field.
+        :return: None
+        """
+        workspace = source_dict.get('workspace')
+        if workspace is not None:
+            workspace = WorkspaceClientCapabilities.from_dict(workspace)
+        init_args['workspace'] = workspace
+
+        window = source_dict.get('window')
+        if window is not None:
+            window = WindowClientCapabilities.from_dict(window)
+        init_args['window'] = window
+
+    def to_dict(self, result: Optional[dict] = None) -> Any:
+        """
+        Dumps an instance of this class to a dictionary object.
+        :return: Returns a dictionary object that represents an instance of this data.
+        """
+        result = result if result is not None else {}
+
+        if self.workspace is not None:
+            result['workspace'] = self.workspace.to_dict()
+        if self.window is not None:
+            result['window'] = self.window.to_dict()
+
+        return result
+
+# endregion

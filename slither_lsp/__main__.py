@@ -49,6 +49,8 @@ def main() -> None:
         declaration_provider=True,
         definition_provider=True,
         type_definition_provider=True,
+        implementation_provider=True,
+        references_provider=True,
         workspace=WorkspaceServerCapabilities(
             workspace_folders=WorkspaceFoldersServerCapabilities(
                 supported=True,

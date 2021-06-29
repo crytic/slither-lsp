@@ -274,13 +274,24 @@ class ImplementationParams(TextDocumentPositionParams, WorkDoneProgressParams, P
 
 
 @dataclass
+class ReferenceContext(SerializableStructure):
+    """
+    Data structure which represents 'textDocument/references' request parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#referenceContext
+    """
+    # Include the declaration of the current symbol.
+    include_declaration: bool = False
+
+
+@dataclass
 class ReferenceParams(TextDocumentPositionParams, WorkDoneProgressParams, PartialResultParams):
     """
     Data structure which represents 'textDocument/references' request parameters.
     References:
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#referenceParams
     """
-    include_declaration: bool = False
+    context: ReferenceContext = field(default_factory=ReferenceContext)
 
 
 @dataclass

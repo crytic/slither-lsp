@@ -25,7 +25,7 @@ class GoToDeclarationHandler(BaseCommandHandler):
         :param params: The parameters object provided with this command.
         :return: Location | Location[] | LocationLink[] | null
         """
-        # Parse our initialization params
+        # Parse our params
         params: DeclarationParams = DeclarationParams.from_dict(params)
 
         # Define our result

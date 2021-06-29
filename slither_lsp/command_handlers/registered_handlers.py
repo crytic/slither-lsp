@@ -24,3 +24,5 @@ from slither_lsp.command_handlers.workspace.did_change_workspace_folder import D
 from slither_lsp.command_handlers.text_document.goto_declaration import GoToDeclarationHandler
 from slither_lsp.command_handlers.text_document.goto_definition import GoToDefinitionHandler
 from slither_lsp.command_handlers.text_document.goto_type_definition import GoToTypeDefinitionHandler
+from slither_lsp.command_handlers.text_document.goto_implementation import GoToImplementationHandler
+from slither_lsp.command_handlers.text_document.find_references import FindReferencesHandler

@@ -1,10 +1,8 @@
 from typing import Any
 
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from slither_lsp.errors.lsp_errors import LSPError, LSPErrorCode
 from slither_lsp.state.server_context import ServerContext
-from slither_lsp.types.lsp_basic_structures import Location, LocationLink
-from slither_lsp.types.lsp_params import DefinitionParams, TypeDefinitionParams
+from slither_lsp.types.lsp_params import TypeDefinitionParams
 
 
 class GoToTypeDefinitionHandler(BaseCommandHandler):
@@ -27,7 +25,7 @@ class GoToTypeDefinitionHandler(BaseCommandHandler):
         :param params: The parameters object provided with this command.
         :return: Location | Location[] | LocationLink[] | null
         """
-        # Parse our initialization params
+        # Parse our params
         params: TypeDefinitionParams = TypeDefinitionParams.from_dict(params)
 
         # Define our result

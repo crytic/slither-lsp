@@ -51,14 +51,16 @@ class BaseServer:
         # Set our running state to True
         self.running = True
 
+        # Create a fresh copy of our initializing server capabilities if we have any.
+        server_capabilities = None
+        if self._init_server_capabilities is not None:
+            server_capabilities = self._init_server_capabilities.clone()
+
         # Reset server state and set our IO
-        server_capabilities = self._init_server_capabilities.clone() if self._init_server_capabilities is not None else None
         self.context = ServerContext(self, server_capabilities=server_capabilities)
         self.io = JsonRpcIo(read_file_handle, write_file_handle)
 
         # Continuously process messages.
-        # TODO: This should use proper controls and not loop endlessly, potentially draining
-        #  resources.
         while True:
             try:
                 # Read a message, if there is none available, loop and wait for another.

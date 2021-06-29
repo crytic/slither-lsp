@@ -1,9 +1,8 @@
 from typing import Any
 
-from slither.__main__ import get_detectors_and_printers, output_detectors_json
-
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.state.server_context import ServerContext
+from slither_lsp.types.lsp_params import DeclarationParams
 
 
 class GoToDeclarationHandler(BaseCommandHandler):
@@ -16,17 +15,6 @@ class GoToDeclarationHandler(BaseCommandHandler):
     method_name = "textDocument/declaration"
 
     @classmethod
-    def _check_capabilities(cls, context: ServerContext) -> None:
-        """
-        Checks if the client has capabilities for this command. Throws a CapabilitiesNotSupportedError if it does not.
-        :param context: The server context which tracks state for the server.
-        :return: None
-        """
-
-        # TODO: Define and check capabilities.
-        pass
-
-    @classmethod
     def process(cls, context: ServerContext, params: Any) -> Any:
         """
         Handles a 'textDocument/declaration' request and attempts to resolve a declaration location of a symbol at a
@@ -35,17 +23,21 @@ class GoToDeclarationHandler(BaseCommandHandler):
             https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_declaration
         :param context: The server context which determines the server to use to send the message.
         :param params: The parameters object provided with this command.
-        :return: None
+        :return: Location | Location[] | LocationLink[] | null
         """
-        # Verify we have appropriate capabilities
-        cls._check_capabilities(context)
+        # Parse our initialization params
+        params: DeclarationParams = DeclarationParams.from_dict(params)
 
-        # TODO: Parse our request
+        # Define our result
+        result = None
 
+        # TODO: Add an abstraction layer here which we can call to to obtain results.
 
         # Emit relevant events
         context.event_emitter.emit(
-            'workspace.didChangeWorkspaceFolders',
-            added=params.event.added,
-            removed=params.event.removed
+            'textDocument.declaration',
+            params=params,
+            result=result
         )
+
+        return result

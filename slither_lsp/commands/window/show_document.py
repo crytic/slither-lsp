@@ -24,7 +24,7 @@ class ShowDocumentRequest(BaseCommand):
             raise CapabilitiesNotSupportedError(cls)
 
     @classmethod
-    def send(cls, context: ServerContext, params: ShowDocumentParams) -> Any:
+    def send(cls, context: ServerContext, params: ShowDocumentParams) -> ShowDocumentResult:
         """
         Sends a 'window/showDocument' request to the client.
         References:
@@ -41,4 +41,4 @@ class ShowDocumentRequest(BaseCommand):
         response: ShowDocumentResult = ShowDocumentResult.from_dict(response)
 
         # Return our result
-        return response.success
+        return response

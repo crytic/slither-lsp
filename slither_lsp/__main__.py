@@ -2,6 +2,7 @@ import argparse
 
 import logging
 
+from slither_lsp.app.app import SlitherLSPApp
 from slither_lsp.servers.console_server import ConsoleServer
 from slither_lsp.servers.network_server import NetworkServer
 from slither_lsp.types.lsp_capabilities import ServerCapabilities, WorkspaceServerCapabilities, \
@@ -45,6 +46,9 @@ def main() -> None:
 
     # Create our capabilities object to determine what capabilities we want this application to have.
     server_capabilities: ServerCapabilities = ServerCapabilities(
+        declaration_provider=True,
+        definition_provider=True,
+        type_definition_provider=True,
         workspace=WorkspaceServerCapabilities(
             workspace_folders=WorkspaceFoldersServerCapabilities(
                 supported=True,
@@ -64,42 +68,8 @@ def main() -> None:
     # Begin processing command_handlers
     server.start()
 
-    # TODO: Remove these tests.
-    while not server.context or not server.context.client_initialized:
-        pass
-    from slither_lsp.commands.workspace.get_workspace_folders import GetWorkspaceFoldersRequest
-    from slither_lsp.commands.window.log_message import LogMessageNotification
-    from slither_lsp.types.lsp_basic_structures import MessageType, Diagnostic, Range, Position, DiagnosticSeverity
-    from slither_lsp.types.lsp_params import ShowDocumentParams, LogMessageParams, ShowMessageParams
-    from slither_lsp.commands.window.show_message import ShowMessageNotification
-    from slither_lsp.commands.window.show_document import ShowDocumentRequest
-    from slither_lsp.commands.text_document.publish_diagnostics import PublishDiagnosticsNotification, \
-        PublishDiagnosticsParams
-
-    folders = GetWorkspaceFoldersRequest.send(server.context)
-    LogMessageNotification.send(server.context, LogMessageParams(type=MessageType.WARNING, message="TEST LOGGED MSG!"))
-    ShowMessageNotification.send(server.context, ShowMessageParams(type=MessageType.ERROR, message="TEST SHOWN MSG!"))
-    shown_doc = ShowDocumentRequest.send(
-        server.context,ShowDocumentParams(
-            uri=r'file:///C:/Users/X/Documents/GitHub/testcontracts/compact.ast',
-            take_focus=True, external=None, selection=None
-        )
-    )
-    PublishDiagnosticsNotification.send(
-        server.context,
-        PublishDiagnosticsParams(
-            uri="TEST.BLAH",
-            version=None,
-            diagnostics=[
-                Diagnostic(
-                    message="test diagnostic message",
-                    range=Range(Position(0, 0), Position(0, 0)),
-                    severity=DiagnosticSeverity.ERROR
-                )
-            ]
-        )
-    )
-    f = folders
+    # Now that the protocol provider is bootstrapped, run our slither app.
+    SlitherLSPApp.run(server)
 
 
 if __name__ == "__main__":

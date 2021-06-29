@@ -7,5 +7,6 @@ max-line-length = 120
 disable = """
 import-outside-toplevel,
 missing-module-docstring,
-useless-return
+useless-return,
+duplicate-code
 """

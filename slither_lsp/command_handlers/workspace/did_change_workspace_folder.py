@@ -52,8 +52,7 @@ class DidChangeWorkspaceFolderHandler(BaseCommandHandler):
         # Emit relevant events
         context.event_emitter.emit(
             'workspace.didChangeWorkspaceFolders',
-            added=params.event.added,
-            removed=params.event.removed
+            params=params
         )
 
         # This is a notification so we return nothing

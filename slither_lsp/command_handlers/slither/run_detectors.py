@@ -3,7 +3,7 @@ from typing import Any
 from slither.__main__ import get_detectors_and_printers, _process as process_detectors_and_printers
 
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
-from slither_lsp.errors.lsp_errors import LSPError, LSPErrorCode
+from slither_lsp.types.lsp_errors import LSPError, LSPErrorCode
 from slither_lsp.state.server_context import ServerContext
 
 

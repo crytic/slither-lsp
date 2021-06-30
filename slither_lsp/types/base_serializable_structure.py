@@ -46,8 +46,8 @@ class SerializableStructure(ABC):
         """
         pass
 
-    @classmethod
-    def create_metadata(cls, name_override=None) -> dict:
+    @staticmethod
+    def create_metadata(name_override=None) -> dict:
         metadata = {}
         if name_override is not None:
             metadata['name'] = name_override

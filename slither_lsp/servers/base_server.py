@@ -4,13 +4,13 @@ from threading import Lock
 from time import sleep
 from typing import Any, Dict, IO, Optional, Type, Union
 
-from pymitter import EventEmitter
-
 from slither_lsp.command_handlers import registered_handlers
 from slither_lsp.command_handlers.base_handler import BaseCommandHandler
 from slither_lsp.command_handlers.lifecycle.exit import ExitHandler
-from slither_lsp.errors.lsp_errors import LSPError, LSPErrorCode
+from slither_lsp.types.event_handler import AsyncEventEmitter
+from slither_lsp.types.lsp_errors import LSPError, LSPErrorCode
 from slither_lsp.io.jsonrpc_io import JsonRpcIo
+from slither_lsp.state.server_hooks import ServerHooks
 from slither_lsp.types.lsp_capabilities import ServerCapabilities
 from slither_lsp.state.server_context import ServerContext
 
@@ -30,7 +30,7 @@ class BaseServer:
     """
     TODO:
     """
-    def __init__(self, server_capabilities: ServerCapabilities):
+    def __init__(self, server_capabilities: ServerCapabilities, server_hooks: Optional[ServerHooks] = None):
         self.running: bool = False
         self.context: Optional[ServerContext] = None
         self.io: Optional[JsonRpcIo] = None
@@ -38,9 +38,10 @@ class BaseServer:
         self._current_server_request_id = 0
         self._request_lock = Lock()
         self._init_server_capabilities: ServerCapabilities = server_capabilities
+        self.server_hooks: Optional[ServerHooks] = server_hooks
 
         # Create our main event emitter
-        self.event_emitter = EventEmitter()
+        self.event_emitter = AsyncEventEmitter()
 
     def _main_loop(self, read_file_handle: IO, write_file_handle: IO):
         """

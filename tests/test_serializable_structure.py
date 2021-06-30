@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, List, Union
 
 from slither_lsp.types.base_serializable_structure import SerializableStructure
@@ -30,17 +30,33 @@ class TestComplexTypeHints(SerializableStructure):
     ids: List[Union[str, int]]
     commands: Union[str, List[str]]
     test: List[List[List[List[str]]]]
+    bool_with_override: bool = field(
+        default=False,
+        metadata=SerializableStructure.create_metadata(name_override="SPECIAL_NAME_BOOL")
+    )
+    test_basic_list: Optional[list] = None
+    test_basic_list2: list = field(default_factory=list)
 
 
 def test_deserialization():
+    # Create a basic structure
     b = TestComplexTypeHints(
         super_union=TestClassA(0),
         statuses=[True, True, False, True],
         texts=["ok", "OK"],
         ids=["id1", 2, "id3", 4],
         commands=["cmd", "-c", "echo hi"],
-        test=[[], [[[]]], [[["hi", "ok"]]]]
+        test=[[], [[[]]], [[["hi", "ok"]]]],
+        test_basic_list=["ok", "ok2", "ok3", 7, [7, 8, 9]],
+        test_basic_list2=["ok4", "ok5", "ok6", 1, [2, 3, 4]],
     )
+
+    # Serialize it
     serialized = b.to_dict()
+
+    # Verify our name override is valid
+    assert 'SPECIAL_NAME_BOOL' in serialized
+
+    # Verify round trip serialization
     b_copy = TestComplexTypeHints.from_dict(serialized)
     assert b == b_copy

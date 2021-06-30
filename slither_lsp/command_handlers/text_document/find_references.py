@@ -23,7 +23,7 @@ class FindReferencesHandler(BaseCommandHandler):
             https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocument_references
         :param context: The server context which determines the server to use to send the message.
         :param params: The parameters object provided with this command.
-        :return: Location[] | null
+        :return: Location[] | None
         """
         # Parse our params
         params: ReferenceParams = ReferenceParams.from_dict(params)
@@ -31,7 +31,9 @@ class FindReferencesHandler(BaseCommandHandler):
         # Define our result
         result = None
 
-        # TODO: Add an abstraction layer here which we can call to to obtain results.
+        # If we have a hook, call it
+        if context.server_hooks is not None:
+            result = context.server_hooks.find_references(context, params)
 
         # Emit relevant events
         context.event_emitter.emit(

@@ -9,7 +9,7 @@ from slither_lsp.types.lsp_basic_structures import WorkspaceFolder, ClientServer
 
 class ServerContext:
     def __init__(self, server, server_capabilities=None):
-        # Import late here to avoid circular reference issues.
+        # Import some items late here
         import slither_lsp.servers.base_server as base_server
 
         # Create our basic LSP state variables
@@ -26,6 +26,14 @@ class ServerContext:
         # Create our analysis results structure
         self._analysis_results: Dict[int, Slither] = {}
         self._next_analysis_id: int = 0
+
+    @property
+    def server_hooks(self):
+        """
+        Represents a set of hooks which can be used to fulfill requests.
+        :return: Returns the server hook object used to fulfill requests.
+        """
+        return self.server.server_hooks
 
     @property
     def event_emitter(self):

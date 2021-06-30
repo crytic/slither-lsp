@@ -44,34 +44,9 @@ def main() -> None:
     # Parse all arguments
     args = parse_args()
 
-    # Create our capabilities object to determine what capabilities we want this application to have.
-    server_capabilities: ServerCapabilities = ServerCapabilities(
-        declaration_provider=True,
-        definition_provider=True,
-        type_definition_provider=True,
-        implementation_provider=True,
-        references_provider=True,
-        workspace=WorkspaceServerCapabilities(
-            workspace_folders=WorkspaceFoldersServerCapabilities(
-                supported=True,
-                change_notifications=True
-            )
-        )
-    )
-
-    # Determine which server provider to use.
-    if args.port:
-        # Initialize a network server (using the provided host/port to communicate over TCP).
-        server = NetworkServer(args.port, server_capabilities=server_capabilities)
-    else:
-        # Initialize a console server (uses stdio to communicate)
-        server = ConsoleServer(server_capabilities=server_capabilities)
-
-    # Begin processing command_handlers
-    server.start()
-
-    # Now that the protocol provider is bootstrapped, run our slither app.
-    SlitherLSPApp.run(server)
+    # Run our main app
+    app = SlitherLSPApp(port=args.port)
+    app.start()
 
 
 if __name__ == "__main__":

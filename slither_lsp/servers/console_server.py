@@ -3,6 +3,7 @@ import sys
 from typing import List, Optional, TextIO
 
 from slither_lsp.servers.base_server import BaseServer
+from slither_lsp.state.server_hooks import ServerHooks
 from slither_lsp.types.lsp_capabilities import ServerCapabilities
 
 
@@ -32,11 +33,11 @@ class ConsoleServer(BaseServer):
     """
     Provides a console (stdin/stdout) interface for JSON-RPC
     """
-    def __init__(self, server_capabilities: ServerCapabilities = None):
+    def __init__(self, server_capabilities: ServerCapabilities = None, server_hooks: Optional[ServerHooks] = None):
         self._actual_stdin: Optional[TextIO] = None
         self._actual_stdout: Optional[TextIO] = None
         self._actual_stderr: Optional[TextIO] = None
-        super().__init__(server_capabilities=server_capabilities)
+        super().__init__(server_capabilities=server_capabilities, server_hooks=server_hooks)
 
     def start(self):
         """

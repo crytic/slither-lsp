@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Union
 
-from slither_lsp.types.base_serializable_structure import SerializableStructure
+from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
 
 
 @dataclass

@@ -1,5 +1,5 @@
 import json
-from slither_lsp.types.lsp_basic_structures import ClientServerInfo, WorkspaceFolder, Position, Range, Location, \
+from slither_lsp.lsp.types.basic_structures import ClientServerInfo, WorkspaceFolder, Position, Range, Location, \
     LocationLink, DiagnosticRelatedInformation, DiagnosticSeverity, DiagnosticTag, Diagnostic, CodeDescription, \
     Command, TextEdit, AnnotatedTextEdit, ChangeAnnotation
 

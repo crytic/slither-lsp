@@ -3,10 +3,6 @@ import argparse
 import logging
 
 from slither_lsp.app.app import SlitherLSPApp
-from slither_lsp.servers.console_server import ConsoleServer
-from slither_lsp.servers.network_server import NetworkServer
-from slither_lsp.types.lsp_capabilities import ServerCapabilities, WorkspaceServerCapabilities, \
-    WorkspaceFoldersServerCapabilities
 
 logging.basicConfig()
 logging.getLogger("slither_lsp").setLevel(logging.INFO)

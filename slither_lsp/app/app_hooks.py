@@ -1,9 +1,9 @@
 from typing import Union, List, Optional
 
-from slither_lsp.state.server_context import ServerContext
-from slither_lsp.state.server_hooks import ServerHooks
-from slither_lsp.types.lsp_basic_structures import Location, LocationLink
-from slither_lsp.types.lsp_params import ImplementationParams, TypeDefinitionParams, DefinitionParams, DeclarationParams
+from slither_lsp.lsp.state.server_context import ServerContext
+from slither_lsp.lsp.state.server_hooks import ServerHooks
+from slither_lsp.lsp.types.basic_structures import Location, LocationLink
+from slither_lsp.lsp.types.params import ImplementationParams, TypeDefinitionParams, DefinitionParams, DeclarationParams
 
 
 class SlitherLSPHooks(ServerHooks):

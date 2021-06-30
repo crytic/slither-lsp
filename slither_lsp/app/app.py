@@ -1,20 +1,24 @@
-from typing import Optional
+import inspect
+from typing import Optional, Type, List
 
 from slither_lsp.app.app_hooks import SlitherLSPHooks
-from slither_lsp.commands.workspace.get_workspace_folders import GetWorkspaceFoldersRequest
-from slither_lsp.commands.window.log_message import LogMessageNotification
-from slither_lsp.servers.base_server import BaseServer
-from slither_lsp.servers.console_server import ConsoleServer
-from slither_lsp.servers.network_server import NetworkServer
-from slither_lsp.state.server_context import ServerContext
-from slither_lsp.types.lsp_basic_structures import MessageType, Diagnostic, Range, Position, DiagnosticSeverity
-from slither_lsp.types.lsp_capabilities import ServerCapabilities, WorkspaceServerCapabilities, \
+from slither_lsp.lsp.request_handlers.base_handler import BaseRequestHandler
+from slither_lsp.lsp.requests.workspace.get_workspace_folders import GetWorkspaceFoldersRequest
+from slither_lsp.lsp.requests.window.log_message import LogMessageNotification
+from slither_lsp.lsp.servers.base_server import BaseServer
+from slither_lsp.lsp.servers.console_server import ConsoleServer
+from slither_lsp.lsp.servers.network_server import NetworkServer
+from slither_lsp.lsp.state.server_config import ServerConfig
+from slither_lsp.lsp.state.server_context import ServerContext
+from slither_lsp.lsp.types.basic_structures import MessageType, Diagnostic, Range, Position, DiagnosticSeverity
+from slither_lsp.lsp.types.capabilities import ServerCapabilities, WorkspaceServerCapabilities, \
     WorkspaceFoldersServerCapabilities
-from slither_lsp.types.lsp_params import ShowDocumentParams, LogMessageParams, ShowMessageParams
-from slither_lsp.commands.window.show_message import ShowMessageNotification
-from slither_lsp.commands.window.show_document import ShowDocumentRequest
-from slither_lsp.commands.text_document.publish_diagnostics import PublishDiagnosticsNotification, \
+from slither_lsp.lsp.types.params import ShowDocumentParams, LogMessageParams, ShowMessageParams
+from slither_lsp.lsp.requests.window.show_message import ShowMessageNotification
+from slither_lsp.lsp.requests.window.show_document import ShowDocumentRequest
+from slither_lsp.lsp.requests.text_document.publish_diagnostics import PublishDiagnosticsNotification, \
     PublishDiagnosticsParams
+from slither_lsp.app.request_handlers import registered_handlers
 
 
 class SlitherLSPApp:
@@ -33,7 +37,8 @@ class SlitherLSPApp:
     @property
     def initial_server_capabilities(self) -> ServerCapabilities:
         """
-        Represents the initial server capabilities to start the server with.
+        Represents the initial server capabilities to start the server with. This signals to the client which
+        capabilities they can expect to leverage.
         :return: Returns the server capabilities to be used with the server.
         """
         return ServerCapabilities(
@@ -50,6 +55,16 @@ class SlitherLSPApp:
             )
         )
 
+    @staticmethod
+    def _get_additional_request_handlers() -> List[Type[BaseRequestHandler]]:
+        # Obtain all additional request handler types imported in our registered list and put them in an array
+        additional_request_handlers: list = []
+        for ch in [getattr(registered_handlers, name) for name in dir(registered_handlers)]:
+            if inspect.isclass(ch) and ch != BaseRequestHandler and issubclass(ch, BaseRequestHandler):
+                additional_request_handlers.append(ch)
+
+        return additional_request_handlers
+
     def start(self):
         """
         The main entry point for the application layer of slither-lsp.
@@ -59,25 +74,25 @@ class SlitherLSPApp:
         # Create our hooks to fulfill LSP requests
         server_hooks = SlitherLSPHooks(self)
 
+        # Create our server configuration with our application hooks
+        server_config = ServerConfig(
+            initial_server_capabilities=self.initial_server_capabilities,
+            hooks=server_hooks,
+            additional_request_handlers=self._get_additional_request_handlers()
+        )
+
         # Determine which server provider to use.
         if self.port:
             # Initialize a network server (using the provided host/port to communicate over TCP).
-            self.server = NetworkServer(
-                self.port,
-                server_capabilities=self.initial_server_capabilities,
-                server_hooks=server_hooks
-            )
+            self.server = NetworkServer(self.port, server_config=server_config)
         else:
             # Initialize a console server (uses stdio to communicate)
-            self.server = ConsoleServer(
-                server_capabilities=self.initial_server_capabilities,
-                server_hooks=server_hooks
-            )
+            self.server = ConsoleServer(server_config=server_config)
 
         # Subscribe to our events
         self.server.event_emitter.on('client.initialized', self.on_client_initialized)
 
-        # Begin processing command_handlers
+        # Begin processing request_handlers
         self.server.start()
 
     def on_client_initialized(self):

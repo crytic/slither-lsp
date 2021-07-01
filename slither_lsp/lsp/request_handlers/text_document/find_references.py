@@ -32,8 +32,8 @@ class FindReferencesHandler(BaseRequestHandler):
         result = None
 
         # If we have a hook, call it
-        if context.config.server_hooks is not None:
-            result = context.config.server_hooks.find_references(context, params)
+        if context.server_hooks is not None:
+            result = context.server_hooks.find_references(context, params)
 
         # Emit relevant events
         context.event_emitter.emit(

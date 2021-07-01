@@ -8,7 +8,7 @@ from slither_lsp.lsp.request_handlers import registered_handlers
 from slither_lsp.lsp.request_handlers.base_handler import BaseRequestHandler
 from slither_lsp.lsp.request_handlers.lifecycle.exit import ExitHandler
 from slither_lsp.lsp.state.server_config import ServerConfig
-from slither_lsp.lsp.types.event_handler import AsyncEventEmitter
+from slither_lsp.lsp.io.event_emitter import AsyncEventEmitter
 from slither_lsp.lsp.types.errors import LSPError, LSPErrorCode
 from slither_lsp.lsp.io.jsonrpc_io import JsonRpcIo
 from slither_lsp.lsp.state.server_context import ServerContext

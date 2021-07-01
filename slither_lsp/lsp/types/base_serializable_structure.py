@@ -32,6 +32,22 @@ class _EmptyDataClass:
 _EMPTY_DEFAULT_TYPE = type(fields(_EmptyDataClass)[0].default)
 
 
+def serialization_metadata(name_override: str = None, include_none: Optional[bool] = None) -> dict:
+    """
+    Creates metadata for python dataclasses, to be used with SerializableStructure to convey additional serialization
+    information.
+    :param name_override: If not None, denotes an override for the key name when serializing a dataclass field.
+    :param include_none: If not None, denotes whether None/null keys should be included.
+    :return: Returns a dictionary containing the metadata keys to be expected
+    """
+    metadata = {}
+    if name_override is not None:
+        metadata['name'] = name_override
+    if include_none is not None:
+        metadata['include_none'] = include_none
+    return metadata
+
+
 @dataclass
 class SerializableStructure(ABC):
     """
@@ -45,13 +61,6 @@ class SerializableStructure(ABC):
         :param kwargs: Arbitrary argument array.
         """
         pass
-
-    @staticmethod
-    def create_metadata(name_override=None) -> dict:
-        metadata = {}
-        if name_override is not None:
-            metadata['name'] = name_override
-        return metadata
 
     def clone(self) -> 'SerializableStructure':
         """
@@ -296,8 +305,12 @@ class SerializableStructure(ABC):
                 # If we don't have an override, we convert to camel case
                 serialized_field_name = _to_camel_case(serialized_field_name)
 
-            # Serialize this field, determine if we should set the result and do so accordingly.
+            # Serialize this field
             serialized_field_value = self._serialize_field(field_value, field.type)
-            result[serialized_field_name] = serialized_field_value
+
+            # Determine if we should set the result. By default None is excluded, unless an override is provided
+            include_none = field_metadata.get('include_none')
+            if serialized_field_value is not None or include_none:
+                result[serialized_field_name] = serialized_field_value
 
         return result

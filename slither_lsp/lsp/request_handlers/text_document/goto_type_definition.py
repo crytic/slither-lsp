@@ -32,8 +32,8 @@ class GoToTypeDefinitionHandler(BaseRequestHandler):
         result = None
 
         # If we have a hook, call it
-        if context.config.server_hooks is not None:
-            result = context.config.server_hooks.goto_type_definition(context, params)
+        if context.server_hooks is not None:
+            result = context.server_hooks.goto_type_definition(context, params)
 
         # Emit relevant events
         context.event_emitter.emit(

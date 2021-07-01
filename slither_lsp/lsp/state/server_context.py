@@ -33,7 +33,7 @@ class ServerContext:
         Represents a set of hooks which can be used to fulfill requests.
         :return: Returns the server hook object used to fulfill requests.
         """
-        return self.server.server_hooks
+        return self.server.config.hooks
 
     @property
     def event_emitter(self):

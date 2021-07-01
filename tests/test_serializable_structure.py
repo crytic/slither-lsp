@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 from typing import Optional, List, Union
 
-from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
+from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure, serialization_metadata
 
 
 @dataclass
@@ -32,10 +32,12 @@ class TestComplexTypeHints(SerializableStructure):
     test: List[List[List[List[str]]]]
     bool_with_override: bool = field(
         default=False,
-        metadata=SerializableStructure.create_metadata(name_override="SPECIAL_NAME_BOOL")
+        metadata=serialization_metadata(name_override="SPECIAL_NAME_BOOL")
     )
     test_basic_list: Optional[list] = None
     test_basic_list2: list = field(default_factory=list)
+    excluded_null: Optional[str] = None
+    included_null: Optional[str] = field(default=None, metadata=serialization_metadata(include_none=True))
 
 
 def test_deserialization():
@@ -56,6 +58,10 @@ def test_deserialization():
 
     # Verify our name override is valid
     assert 'SPECIAL_NAME_BOOL' in serialized
+
+    # Verify our included/excluded null values are/aren't there, as expected.
+    assert 'includedNull' in serialized
+    assert 'excludedNull' not in serialized
 
     # Verify round trip serialization
     b_copy = TestComplexTypeHints.from_dict(serialized)

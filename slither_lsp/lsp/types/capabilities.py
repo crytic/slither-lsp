@@ -1,4 +1,5 @@
 from dataclasses import dataclass, field
+from enum import Enum
 from typing import Any, Optional, Union, List
 
 from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
@@ -352,6 +353,80 @@ class TextDocumentClientCapabilities(SerializableStructure):
     document_highlight: Optional[DocumentHighlightClientCapabilities] = None
 
 
+class ResourceOperationKind(Enum):
+    """
+    Defines the kind of resource operations supported by a client.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#resourceOperationKind
+    """
+    # Supports creating new files and folders.
+    CREATE = 'create'
+
+    # Supports renaming existing files and folders.
+    RENAME = 'rename'
+
+    # Supports deleting existing files and folders.
+    DELETE = 'delete'
+
+
+class FailureHandlingKind(Enum):
+    """
+    Defines the kind of failure handling supported by a client.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#failureHandlingKind
+    """
+    # Applying the workspace change is simply aborted if one of the changes
+    # provided fails. All operations executed before the failing operation
+    # stay executed.
+    ABORT = 'abort'
+
+    # All operations are executed transactional. That means they either all
+    # succeed or no changes at all are applied to the workspace.
+    TRANSACTIONAL = 'transactional'
+
+    # If the workspace edit contains only textual file changes they are
+    # executed transactional. If resource changes (create, rename or delete
+    # file) are part of the change the failure handling strategy is abort.
+    TEXT_ONLY_TRANSACTIONAL = 'textOnlyTransactional'
+
+    # The client tries to undo the operations already executed. But there is no
+    # guarantee that this is succeeding.
+    UNDO = 'undo'
+
+
+@dataclass
+class WorkspaceEditChangeAnnotationSupportClientCapabilities(SerializableStructure):
+    """
+     Data structure which describe a subsection of a client's workspace edit capabilities related to change annotation
+     support.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspaceEditClientCapabilities
+    """
+    # Whether the client groups edits with equal labels into tree nodes,
+    # for instance all edits labelled with "Changes in Strings" would
+    # be a tree node.
+    groups_on_label: Optional[bool]
+
+
+@dataclass
+class WorkspaceEditClientCapabilities(SerializableStructure):
+    """
+     Data structure which describe a clients capabilities for workspace edits.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspaceEditClientCapabilities
+    """
+    #
+    document_changes: Optional[bool]
+
+    resource_operations: Optional[List[ResourceOperationKind]]
+
+    failure_handling: Optional[FailureHandlingKind]
+
+    normalizes_line_endings: Optional[bool]
+
+    change_annotation_support: Optional[WorkspaceEditChangeAnnotationSupportClientCapabilities]
+
+
 @dataclass
 class WorkspaceClientCapabilities(SerializableStructure):
     """
@@ -363,6 +438,9 @@ class WorkspaceClientCapabilities(SerializableStructure):
     # to the workspace by supporting the request
     # 'workspace/applyEdit'
     apply_edit: Optional[bool] = None
+
+    # Capabilities specific to `WorkspaceEdit`s
+    workspace_edit: Optional[WorkspaceEditClientCapabilities] = None
 
     # TODO: workspaceEdit, didChangeConfiguration, didChangeWatchedFiles, symbol, executeCommand
 

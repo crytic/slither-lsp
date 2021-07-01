@@ -1,6 +1,6 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import IntEnum, Enum
-from typing import Optional, Any, Union, List
+from typing import Optional, Any, Union, List, Dict
 
 # These structures ideally would just be dataclass objects, so we could cast dictionaries to dataclasses.
 # However, dataclasses cannot initialize with unexpected parameters, and we can't assume the Language Server
@@ -11,7 +11,7 @@ from typing import Optional, Any, Union, List
 
 # Text documents have a defined EOL.
 # https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocuments
-from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
+from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure, serialization_metadata
 
 EOL = ['\n', '\r\n', '\r']
 
@@ -289,7 +289,7 @@ class AnnotatedTextEdit(TextEdit):
 
 
 @dataclass
-class TextDocumentIdentifier(TextEdit):
+class TextDocumentIdentifier(SerializableStructure):
     """
     Data structure which represents a text document identifier (uri).
     References:
@@ -298,6 +298,224 @@ class TextDocumentIdentifier(TextEdit):
 
     # The actual annotation identifier.
     uri: str
+
+
+@dataclass
+class VersionedTextDocumentIdentifier(TextDocumentIdentifier):
+    """
+    Data structure which represents an identifier to denote a specific version of a text document.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#versionedTextDocumentIdentifier
+    """
+
+    # The version number of this document. If an optional versioned text document
+    # identifier is sent from the server to the client and the file is not
+    # open in the editor (the server has not received an open notification
+    # before) the server can send `null` to indicate that the version is
+    # known and the content on disk is the master (as specified with document
+    # content ownership).
+    #
+    # The version number of a document will increase after each change,
+    # including undo/redo. The number doesn't need to be consecutive.
+    version: Optional[int] = field(default=None, metadata=serialization_metadata(include_none=True))  # int | null
+
+
+@dataclass
+class OptionalVersionedTextDocumentIdentifier(TextDocumentIdentifier):
+    """
+    Data structure which represents an identifier which optionally denotes a specific version of a text document.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#optionalVersionedTextDocumentIdentifier
+    """
+
+    # The version number of this document. If an optional versioned text document
+    # identifier is sent from the server to the client and the file is not
+    # open in the editor (the server has not received an open notification
+    # before) the server can send `null` to indicate that the version is
+    # known and the content on disk is the master (as specified with document
+    # content ownership).
+    #
+    # The version number of a document will increase after each change,
+    # including undo/redo. The number doesn't need to be consecutive.
+    version: Optional[int] = field(default=None, metadata=serialization_metadata(include_none=True))  # int | null
+
+
+@dataclass
+class TextDocumentEdit(SerializableStructure):
+    """
+    Data structure which represents describes textual changes on a single text document.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentEdit
+    """
+
+    # The text document to change.
+    text_document: OptionalVersionedTextDocumentIdentifier
+
+    # The edits to be applied.
+    # @since 3.16.0 - support for AnnotatedTextEdit. This is guarded by the
+    # client capability `workspace.workspaceEdit.changeAnnotationSupport`
+    edits: List[Union[AnnotatedTextEdit, TextEdit]]
+
+
+@dataclass
+class CreateFileOptions(SerializableStructure):
+    """
+    Data structure which represents options to create a file.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#createFileOptions
+    """
+    # Overwrite existing file. Overwrite wins over `ignoreIfExists`
+    overwrite: Optional[bool]
+
+    # Ignore if exists.
+    ignore_if_exists: Optional[bool]
+
+
+@dataclass
+class CreateFile(SerializableStructure):
+    """
+    Data structure which represents a create file operation.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#createFile
+    """
+    # The resource to create.
+    uri: str
+
+    # Additional options
+    options: Optional[CreateFileOptions]
+
+    # An optional annotation identifier describing the operation.
+    # @since 3.16.0
+    annotation_id: Optional[str]
+
+    # A create
+    kind: str = 'create'
+
+
+@dataclass
+class RenameFileOptions(SerializableStructure):
+    """
+    Data structure which represents options to rename a file.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#renameFileOptions
+    """
+    # Overwrite target if existing. Overwrite wins over `ignoreIfExists`
+    overwrite: Optional[bool]
+
+    # Ignore if target exists.
+    ignore_if_exists: Optional[bool]
+
+
+@dataclass
+class RenameFile(SerializableStructure):
+    """
+    Data structure which represents a rename file operation.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#renameFile
+    """
+    # The old (existing) location.
+    old_uri: str
+
+    # The new location.
+    new_uri: str
+
+    # Rename options
+    options: Optional[RenameFileOptions]
+
+    # An optional annotation identifier describing the operation.
+    # @since 3.16.0
+    annotation_id: Optional[str]
+
+    # A rename
+    kind: str = 'rename'
+
+
+@dataclass
+class DeleteFileOptions(SerializableStructure):
+    """
+    Data structure which represents options to delete a file.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#deleteFileOptions
+    """
+    # Delete the content recursively if a folder is denoted.
+    recursive: Optional[bool]
+
+    # Ignore if target exists.
+    ignore_if_exists: Optional[bool]
+
+
+@dataclass
+class DeleteFile(SerializableStructure):
+    """
+    Data structure which represents a delete file operation.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#deleteFile
+    """
+    # The file to delete.
+    uri: str
+
+    # Delete options.
+    options: Optional[DeleteFileOptions]
+
+    # An optional annotation identifier describing the operation.
+    # @since 3.16.0
+    annotation_id: Optional[str]
+
+    # A delete
+    kind: str = 'delete'
+
+
+@dataclass
+class WorkspaceEdit(SerializableStructure):
+    """
+    Data structure which represents changes to many resources managed in the workspace.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspaceEdit
+    """
+    # Holds changes to existing resources.
+    changes: Optional[Dict[str, List[TextEdit]]]
+
+    # Depending on the client capability
+    # `workspace.workspaceEdit.resourceOperations` document changes are either
+    # an array of `TextDocumentEdit`s to express changes to n different text
+    # documents where each text document edit addresses a specific version of
+    # a text document. Or it can contain above `TextDocumentEdit`s mixed with
+    # create, rename and delete file / folder operations.
+    #
+    # Whether a client supports versioned document edits is expressed via
+    # `workspace.workspaceEdit.documentChanges` client capability.
+    #
+    # If a client neither supports `documentChanges` nor
+    # `workspace.workspaceEdit.resourceOperations` then only plain `TextEdit`s
+    # using the `changes` property are supported.
+    document_changes: Union[List[TextDocumentEdit], List[Union[TextDocumentEdit, CreateFile, RenameFile, DeleteFile]]]
+
+    # A map of change annotations that can be referenced in
+    # `AnnotatedTextEdit`s or create, rename and delete file / folder
+    # operations.
+    #
+    # Whether clients honor this property depends on the client capability
+    # `workspace.changeAnnotationSupport`.
+    #
+    # @since 3.16.0
+    change_annotations: Dict[List[str], ChangeAnnotation]  # List[annotationId]: ChangeAnnotation
+
+
+@dataclass
+class TextDocumentItem(SerializableStructure):
+    """
+    Data structure which represents an item to transfer a text document from the client to the server.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentItem
+    """
+    # The text document's URI.
+    uri: str
+    # The text document's language identifier.
+    language_id: str
+    # The version number of this document (it will increase after each change, including undo/redo).
+    version: int
+    # The content of the opened text document.
+    text: str
 
 
 class TraceValue(Enum):

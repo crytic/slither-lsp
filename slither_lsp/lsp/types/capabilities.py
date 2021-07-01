@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, IntEnum
 from typing import Any, Optional, Union, List
 
 from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
@@ -224,6 +224,66 @@ class WorkspaceServerCapabilities(SerializableStructure):
     file_operations: Optional[WorkspaceFileOperationsServerCapabilities] = None
 
 
+class TextDocumentSyncKind(IntEnum):
+    """
+    Defines how the host (editor) should sync document changes to the language server.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentSyncKind
+    """
+    # Documents should not be synced at all.
+    NONE = 0
+
+    # Documents are synced by always sending the full content of the document.
+    FULL = 1
+
+    # Documents are synced by sending the full content on open.
+    # After that only incremental updates to the document are
+    # send.
+    INCREMENTAL = 2
+
+
+@dataclass
+class SaveOptions(SerializableStructure):
+    """
+    Data structure which represents options for a saved file
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#saveOptions
+    """
+    # The client is supposed to include the content on save.
+    include_text: Optional[bool] = None
+
+
+@dataclass
+class TextDocumentSyncOptions(SerializableStructure):
+    """
+    Data structure which represents options to delete a file.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentSyncOptions
+    Note:
+        There are two structs defined in the referenced documentation. One partial, one full.
+    """
+    # Open and close notifications are sent to the server. If omitted open close notification should not be sent.
+    open_close: Optional[bool] = None
+
+    # Change notifications are sent to the server. See
+    # TextDocumentSyncKind.None, TextDocumentSyncKind.Full and
+    # TextDocumentSyncKind.Incremental. If omitted it defaults to
+    # TextDocumentSyncKind.None.
+    change: Optional[TextDocumentSyncKind] = None
+
+    # If present will save notifications are sent to the server. If omitted
+    # the notification should not be sent.
+    will_save: Optional[bool] = None
+
+    # If present will save wait until requests are sent to the server. If
+    # omitted the request should not be sent.
+    will_save_wait_until: Optional[bool] = None
+
+    # If present save notifications are sent to the server. If omitted the
+    # notification should not be sent.
+    save: Union[bool, SaveOptions, None] = None
+
+
 @dataclass
 class ServerCapabilities(SerializableStructure):
     """
@@ -231,6 +291,11 @@ class ServerCapabilities(SerializableStructure):
     References:
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#serverCapabilities
     """
+    # Defines how text documents are synced. Is either a detailed structure
+    # defining each notification or for backwards compatibility the
+    # TextDocumentSyncKind number. If omitted it defaults to
+    # `TextDocumentSyncKind.None`.
+    text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
 
     # The server provides go to declaration support.
     # @since 3.14.0
@@ -428,12 +493,39 @@ class DocumentHighlightClientCapabilities(SerializableStructure):
 
 
 @dataclass
+class TextDocumentSyncClientCapabilities(SerializableStructure):
+    """
+     Data structure which contains capabilities specific to the text document synchronization.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentSyncClientCapabilities
+    """
+    # Whether text document synchronization supports dynamic registration.
+    dynamic_registration: Optional[bool] = None
+
+    # The client supports sending will save notifications.
+    will_save: Optional[bool] = None
+
+    # The client supports sending a will save request and
+    # waits for a response providing text edits which will
+    # be applied to the document before it is saved.
+    will_save_wait_until: Optional[bool] = None
+
+    # The client supports did save notifications.
+    did_save: Optional[bool] = None
+
+
+@dataclass
 class TextDocumentClientCapabilities(SerializableStructure):
     """
      Data structure which represents text document specific client capabilities.
      References:
          https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentClientCapabilities
     """
+    # Text synchronization capabilities
+    synchronization: Optional[TextDocumentSyncClientCapabilities] = None
+
+    # TODO: completion, hover, signatureHelp
+
     # Capabilities specific to the `textDocument/declaration` request.
     # @since 3.14.0
     declaration: Optional[DeclarationClientCapabilities] = None

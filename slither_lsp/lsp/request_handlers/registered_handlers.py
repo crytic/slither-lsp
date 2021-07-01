@@ -7,7 +7,14 @@ from slither_lsp.lsp.request_handlers.lifecycle.exit import ExitHandler
 from slither_lsp.lsp.request_handlers.lifecycle.set_trace import SetTraceHandler
 
 # workspace
-from slither_lsp.lsp.request_handlers.workspace.did_change_workspace_folder import DidChangeWorkspaceFolderHandler
+from slither_lsp.lsp.request_handlers.workspace.did_change_workspace_folders import DidChangeWorkspaceFolderHandler
+
+# text synchronization
+from slither_lsp.lsp.request_handlers.text_document.did_open import DidOpenHandler
+from slither_lsp.lsp.request_handlers.text_document.did_change import DidChangeHandler
+from slither_lsp.lsp.request_handlers.text_document.will_save import WillSaveHandler
+from slither_lsp.lsp.request_handlers.text_document.did_save import DidSaveHandler
+from slither_lsp.lsp.request_handlers.text_document.did_close import DidCloseHandler
 
 # language features
 from slither_lsp.lsp.request_handlers.text_document.goto_declaration import GoToDeclarationHandler

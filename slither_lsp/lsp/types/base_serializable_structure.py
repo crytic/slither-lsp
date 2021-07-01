@@ -150,7 +150,7 @@ class SerializableStructure(ABC):
                         potential_list_origin_type, potential_list_element_types = _get_potential_types(satisfying_type)
 
                     if potential_list_origin_type is not None and issubclass(potential_list_origin_type, list):
-                        # Obtain our element type. If we don't have one, we use 'Any' by default
+                        # Obtain our key/value types. If we don't have one, we use 'Any' by default
                         element_type = Any
                         if len(potential_list_element_types) > 0:
                             element_type = potential_list_element_types[0]
@@ -161,6 +161,34 @@ class SerializableStructure(ABC):
                             for element in field_value
                         ]
                         return serialized_list
+                except ValueError:
+                    pass
+
+            # Handle dictionaries if our field value is a dictionary
+            if isinstance(field_value, dict):
+                try:
+                    # Obtain information about the satisfying type
+                    if inspect.isclass(satisfying_type) and satisfying_type is dict:
+                        potential_list_origin_type = dict
+                        potential_list_element_types = []
+                    else:
+                        potential_list_origin_type, potential_list_element_types = _get_potential_types(satisfying_type)
+
+                    if potential_list_origin_type is not None and issubclass(potential_list_origin_type, dict):
+                        # Obtain our key/value types. If we don't have one, we use 'Any' by default
+                        dict_key_type = Any
+                        dict_value_type = Any
+                        if len(potential_list_element_types) > 1:
+                            dict_key_type = potential_list_element_types[0]
+                            dict_value_type = potential_list_element_types[1]
+
+                        # Deserialize the dictionary accordingly.
+                        serialized_dict = {}
+                        for dict_key, dict_value in field_value.items():
+                            serialized_key = cls._serialize_field(dict_key, dict_key_type)
+                            serialized_value = cls._serialize_field(dict_value, dict_value_type)
+                            serialized_dict[serialized_key] = serialized_value
+                        return serialized_dict
                 except ValueError:
                     pass
 
@@ -248,6 +276,34 @@ class SerializableStructure(ABC):
                             for serialized_element in serialized_value
                         ]
                         return deserialized_list
+                except ValueError:
+                    pass
+
+            # Handle dictionaries if our serialized value is a dictionary
+            if isinstance(serialized_value, dict):
+                try:
+                    # Obtain information about the satisfying type
+                    if inspect.isclass(satisfying_type) and satisfying_type is dict:
+                        potential_list_origin_type = dict
+                        potential_list_element_types = []
+                    else:
+                        potential_list_origin_type, potential_list_element_types = _get_potential_types(satisfying_type)
+
+                    if potential_list_origin_type is not None and issubclass(potential_list_origin_type, dict):
+                        # Obtain our element type. If we don't have one, we use 'Any' by default
+                        dict_key_type = Any
+                        dict_value_type = Any
+                        if len(potential_list_element_types) > 1:
+                            dict_key_type = potential_list_element_types[0]
+                            dict_value_type = potential_list_element_types[1]
+
+                        # Deserialize the dictionary accordingly.
+                        deserialized_dict = {}
+                        for serialize_dict_key, serialize_dict_value in serialized_value.items():
+                            deserialized_key = cls._deserialize_field(serialize_dict_key, dict_key_type)
+                            deserialized_value = cls._deserialize_field(serialize_dict_value, dict_value_type)
+                            deserialized_dict[deserialized_key] = deserialized_value
+                        return deserialized_dict
                 except ValueError:
                     pass
 

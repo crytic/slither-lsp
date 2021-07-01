@@ -12,7 +12,7 @@ from slither_lsp.lsp.state.server_config import ServerConfig
 from slither_lsp.lsp.state.server_context import ServerContext
 from slither_lsp.lsp.types.basic_structures import MessageType, Diagnostic, Range, Position, DiagnosticSeverity
 from slither_lsp.lsp.types.capabilities import ServerCapabilities, WorkspaceServerCapabilities, \
-    WorkspaceFoldersServerCapabilities
+    WorkspaceFoldersServerCapabilities, TextDocumentSyncOptions, TextDocumentSyncKind, SaveOptions
 from slither_lsp.lsp.types.params import ShowDocumentParams, LogMessageParams, ShowMessageParams
 from slither_lsp.lsp.requests.window.show_message import ShowMessageNotification
 from slither_lsp.lsp.requests.window.show_document import ShowDocumentRequest
@@ -42,6 +42,15 @@ class SlitherLSPApp:
         :return: Returns the server capabilities to be used with the server.
         """
         return ServerCapabilities(
+            text_document_sync=TextDocumentSyncOptions(
+                open_close=True,
+                change=TextDocumentSyncKind.FULL,
+                will_save=True,
+                will_save_wait_until=False,
+                save=SaveOptions(
+                    include_text=True
+                )
+            ),
             declaration_provider=True,
             definition_provider=True,
             type_definition_provider=True,

@@ -1,10 +1,11 @@
 # pylint: disable=duplicate-code
 from dataclasses import dataclass, field
+from enum import IntEnum
 from typing import Union, Any, Optional, List
 
 from slither_lsp.lsp.types.capabilities import ClientCapabilities, ServerCapabilities
 from slither_lsp.lsp.types.basic_structures import ClientServerInfo, TraceValue, WorkspaceFolder, MessageType, Range, \
-    Diagnostic, TextDocumentIdentifier, Position
+    Diagnostic, TextDocumentIdentifier, Position, TextDocumentItem, VersionedTextDocumentIdentifier
 from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
 
 
@@ -200,6 +201,121 @@ class DidChangeWorkspaceFoldersParams(SerializableStructure):
     """
     # The actual workspace folder change event.
     event: WorkspaceFoldersChangeEvent = field(default_factory=WorkspaceFoldersChangeEvent)
+
+
+@dataclass
+class DidOpenTextDocumentParams(SerializableStructure):
+    """
+    Data structure which represents 'textDocument/didOpen' notifications.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#didOpenTextDocumentParams
+    """
+    # The document that was opened.
+    text_document: TextDocumentItem
+
+
+@dataclass
+class TextDocumentContentChangeEvent(SerializableStructure):
+    """
+    Data structure which represents an event describing a change to a text document.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentContentChangeEvent
+    """
+    # NOTE: This class should either just have 'text', or 'text', 'range', and an optional 'rangeLength'.
+    # For this reason, we just make 'range' optional here since we're simply receiving it. Otherwise we'd need to
+    # define two different structs.
+
+    # The range of the document that changed.
+    text: str
+
+    # The optional length of the range that got replaced.
+    # @deprecated use range instead.
+    range: Optional[Range] = None
+
+    range_length: Optional[int] = None
+
+
+@dataclass
+class DidChangeTextDocumentParams(SerializableStructure):
+    """
+    Data structure which represents 'textDocument/didChange' notifications.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#didChangeTextDocumentParams
+    """
+    # The document that did change. The version number points
+    # to the version after all provided content changes have
+    # been applied.
+    text_document: VersionedTextDocumentIdentifier
+
+    # The actual content changes. The content changes describe single state
+    #  changes to the document. So if there are two content changes c1 (at
+    #  array index 0) and c2 (at array index 1) for a document in state S then
+    #  c1 moves the document from S to S' and c2 from S' to S''. So c1 is
+    #  computed on the state S and c2 is computed on the state S'.
+    #
+    #  To mirror the content of a document using change events use the following
+    #  approach:
+    #  - start with the same initial content
+    #  - apply the 'textDocument/didChange' notifications in the order you
+    #    receive them.
+    #  - apply the `TextDocumentContentChangeEvent`s in a single notification
+    #    in the order you receive them.
+    content_changes: TextDocumentContentChangeEvent
+
+
+class TextDocumentSaveReason(IntEnum):
+    """
+    Defines how the host (editor) should sync document changes to the language server.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentSyncKind
+    """
+    # Manually triggered, e.g. by the user pressing save, by starting debugging, or by an API call.
+    MANUAL = 1
+
+    # Automatic after a delay.
+    AFTER_DELAY = 2
+
+    # When the editor lost focus.
+    FOCUS_OUT = 3
+
+
+@dataclass
+class WillSaveTextDocumentParams(SerializableStructure):
+    """
+    Data structure which represents 'textDocument/willSave' notifications.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#willSaveTextDocumentParams
+    """
+    # The document that will be saved.
+    text_document: TextDocumentIdentifier
+
+    # The 'TextDocumentSaveReason'.
+    reason: TextDocumentSaveReason
+
+
+@dataclass
+class DidSaveTextDocumentParams(SerializableStructure):
+    """
+    Data structure which represents 'textDocument/didSave' notifications.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#didSaveTextDocumentParams
+    """
+    # The document that was saved.
+    text_document: TextDocumentIdentifier
+
+    # Optional the content when saved. Depends on the includeText value when the save notification was requested.
+    text: Optional[str] = None
+
+
+@dataclass
+class DidCloseTextDocumentParams(SerializableStructure):
+    """
+    Data structure which represents 'textDocument/didClose' notifications.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#didCloseTextDocumentParams
+    """
+    # The document that was closed.
+    text_document: TextDocumentIdentifier
 
 
 @dataclass

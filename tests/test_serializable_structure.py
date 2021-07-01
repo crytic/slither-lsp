@@ -1,5 +1,5 @@
 from dataclasses import dataclass, field
-from typing import Optional, List, Union
+from typing import Optional, List, Union, Dict
 
 from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure, serialization_metadata
 
@@ -86,3 +86,29 @@ def test_enforce_as_constant():
     except ValueError:
         failed_bad_constant = True
     assert failed_bad_constant
+
+
+@dataclass
+class TestDictStruct(SerializableStructure):
+    x: int
+    y: TestClassA
+    z: Dict[str, TestClassA]
+
+
+def test_struct_with_dict():
+    # Create a test structure with a dictionary
+    test_dict = TestDictStruct(
+        x=0,
+        y=TestClassA(7),
+        z={
+            "first": TestClassA(1),
+            "second": TestClassA(2)
+        }
+    )
+
+    # Serialize our structure
+    serialized = test_dict.to_dict()
+
+    # Verify round trip serialization
+    test_dict_copy = TestDictStruct.from_dict(serialized)
+    assert test_dict == test_dict_copy

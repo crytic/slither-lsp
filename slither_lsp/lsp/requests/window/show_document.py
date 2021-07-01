@@ -17,8 +17,8 @@ class ShowDocumentRequest(BaseRequest):
         :param context: The server context which tracks state for the server.
         :return: None
         """
-        if not context.client_capabilities.window and context.client_capabilities.window.show_document and \
-                context.client_capabilities.window.show_document.support:
+        if not (context.client_capabilities.window and context.client_capabilities.window.show_document and
+                context.client_capabilities.window.show_document.support):
             raise CapabilitiesNotSupportedError(cls)
 
     @classmethod

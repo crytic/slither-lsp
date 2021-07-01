@@ -6,11 +6,15 @@ from enum import Enum, IntEnum
 from typing import Any, Optional, Type, Set, List, Union, get_args, get_origin, Tuple
 
 
-def _to_camel_case(snake_str):
-    components = snake_str.split('_')
-    # We capitalize the first letter of each component except the first one
-    # with the 'title' method and join them together.
-    return components[0] + ''.join(x.title() for x in components[1:])
+def _to_camel_case(s):
+    """
+    Converts a snake case string into a camel case string.
+    :param s: The snake string to convert into camel case.
+    :return: Returns the resulting camel case string.
+    """
+    # Split string on underscore. Output first part but capitalize the first letter of the other parts and join them.
+    parts = s.split('_')
+    return parts[0] + ''.join(x.title() for x in parts[1:])
 
 
 def _get_potential_types(obj_type: Type) -> Tuple[Optional[Type], List[Type]]:
@@ -32,12 +36,27 @@ class _EmptyDataClass:
 _EMPTY_DEFAULT_TYPE = type(fields(_EmptyDataClass)[0].default)
 
 
-def serialization_metadata(name_override: str = None, include_none: Optional[bool] = None) -> dict:
+def _get_default_value(field):
+    """
+    Obtains a default value for a given field.
+    :param field: The field to obtain the default value for.
+    :return: Returns a default value for a given field.
+    """
+    if not isinstance(field.default, _EMPTY_DEFAULT_TYPE):
+        return field.default
+    elif not isinstance(field.default_factory, _EMPTY_DEFAULT_TYPE):
+        return field.default_factory()
+    return None
+
+
+def serialization_metadata(name_override: str = None, include_none: Optional[bool] = None,
+                           enforce_as_constant: Optional[bool] = None) -> dict:
     """
     Creates metadata for python dataclasses, to be used with SerializableStructure to convey additional serialization
     information.
     :param name_override: If not None, denotes an override for the key name when serializing a dataclass field.
     :param include_none: If not None, denotes whether None/null keys should be included.
+    :param enforce_as_constant: If not None, treats the default value as a constant which needs to be enforced strictly.
     :return: Returns a dictionary containing the metadata keys to be expected
     """
     metadata = {}
@@ -45,6 +64,8 @@ def serialization_metadata(name_override: str = None, include_none: Optional[boo
         metadata['name'] = name_override
     if include_none is not None:
         metadata['include_none'] = include_none
+    if enforce_as_constant is not None:
+        metadata['enforce_as_constant'] = enforce_as_constant
     return metadata
 
 
@@ -265,14 +286,23 @@ class SerializableStructure(ABC):
 
             # If this field existed in our object, deserialize it and set its value.
             if serialized_field_name in obj:
-                init_args[field.name] = cls._deserialize_field(serialized_field_value, field.type)
+                # Deserialize the field value
+                field_value = cls._deserialize_field(serialized_field_value, field.type)
+
+                # If we are enforcing a constant, we raise an error if it does not match the default value.
+                enforce_as_constant = field_metadata.get('enforce_as_constant')
+                if enforce_as_constant:
+                    default_value = _get_default_value(field)
+                    if field_value != default_value:
+                        raise ValueError(
+                            f"Field {field.name} could not be deserialized because metadata defined it as a constant "
+                            f"and the provided value did not equal the default value."
+                        )
+
+                init_args[field.name] = field_value
             else:
                 # Otherwise set the default value if we were provided one, otherwise we use None as a default.
-                default_value = None
-                if not isinstance(field.default, _EMPTY_DEFAULT_TYPE):
-                    default_value = field.default
-                elif not isinstance(field.default_factory, _EMPTY_DEFAULT_TYPE):
-                    default_value = field.default_factory()
+                default_value = _get_default_value(field)
                 init_args[field.name] = default_value
 
         # Use the parsed arguments to instantiate a copy of this class
@@ -304,6 +334,11 @@ class SerializableStructure(ABC):
             else:
                 # If we don't have an override, we convert to camel case
                 serialized_field_name = _to_camel_case(serialized_field_name)
+
+            # If we are enforcing the default as a constant, we overwrite the field value with the default.
+            enforce_as_constant = field_metadata.get('enforce_as_constant')
+            if enforce_as_constant:
+                field_value = _get_default_value(field)
 
             # Serialize this field
             serialized_field_value = self._serialize_field(field_value, field.type)

@@ -283,7 +283,6 @@ class AnnotatedTextEdit(TextEdit):
     References:
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#annotatedTextEdit
     """
-
     # The actual annotation identifier.
     annotation_id: str
 
@@ -295,7 +294,6 @@ class TextDocumentIdentifier(SerializableStructure):
     References:
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentIdentifier
     """
-
     # The actual annotation identifier.
     uri: str
 
@@ -389,7 +387,7 @@ class CreateFile(SerializableStructure):
     annotation_id: Optional[str]
 
     # A create
-    kind: str = 'create'
+    kind: str = field(default='create', metadata=serialization_metadata(enforce_as_constant=True))
 
 
 @dataclass
@@ -427,7 +425,7 @@ class RenameFile(SerializableStructure):
     annotation_id: Optional[str]
 
     # A rename
-    kind: str = 'rename'
+    kind: str = field(default='rename', metadata=serialization_metadata(enforce_as_constant=True))
 
 
 @dataclass
@@ -462,7 +460,7 @@ class DeleteFile(SerializableStructure):
     annotation_id: Optional[str]
 
     # A delete
-    kind: str = 'delete'
+    kind: str = field(default='delete', metadata=serialization_metadata(enforce_as_constant=True))
 
 
 @dataclass
@@ -510,12 +508,110 @@ class TextDocumentItem(SerializableStructure):
     """
     # The text document's URI.
     uri: str
-    # The text document's language identifier.
+
+    # The text document's language identifier. See language ids in the reference for this structure.
     language_id: str
+
     # The version number of this document (it will increase after each change, including undo/redo).
     version: int
+
     # The content of the opened text document.
     text: str
+
+
+@dataclass
+class TextDocumentPositionParams(SerializableStructure):
+    """
+    Data structure which represents a parameter literal used in requests to pass a text document and a position
+    inside that document.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#textDocumentPositionParams
+    """
+    # The text document.
+    text_document: TextDocumentIdentifier
+
+    # The position inside the text document.
+    position: Position
+
+
+@dataclass
+class DocumentFilter(SerializableStructure):
+    """
+    Data structure which represents a document filter which denotes a document through properties like language,
+    scheme or pattern
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#documentFilter
+    """
+    # A language id, like `typescript`.
+    language: Optional[str]
+
+    # A Uri [scheme](#Uri.scheme), like `file` or `untitled`.
+    scheme: Optional[str]
+
+    # A glob pattern, like `*.{ts,js}`.
+    #
+    # Glob patterns can have the following syntax:
+    # - `*` to match one or more characters in a path segment
+    # - `?` to match on one character in a path segment
+    # - `**` to match any number of path segments, including none
+    # - `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}`
+    #   matches all TypeScript and JavaScript files)
+    # - `[]` to declare a range of characters to match in a path segment
+    #   (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
+    # - `[!...]` to negate a range of characters to match in a path segment
+    #   (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but
+    #   not `example.0`)
+    pattern: Optional[str]
+
+
+class MarkupKind(Enum):
+    """
+    Represents a string value which content can be represented in different formats
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#markupContent
+    """
+    PLAINTEXT = 'plaintext'
+    MARKDOWN = 'markdown'
+
+
+@dataclass
+class MarkupContent(SerializableStructure):
+    """
+    Data structure which represents a document filter which denotes a document through properties like language,
+    scheme or pattern
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#markupContentInnerDefinition
+    """
+    # A `MarkupContent` literal represents a string value which content is
+    # interpreted base on its kind flag. Currently the protocol supports
+    # `plaintext` and `markdown` as markup kinds.
+    #
+    # If the kind is `markdown` then the value can contain fenced code blocks like
+    # in GitHub issues.
+    #
+    # Here is an example how such a string can be constructed using
+    # JavaScript / TypeScript:
+    # ```typescript
+    # let markdown: MarkdownContent = {
+    # 	kind: MarkupKind.Markdown,
+    # 	value: [
+    # 		'# Header',
+    # 		'Some text',
+    # 		'```typescript',
+    # 		'someCode();',
+    # 		'```'
+    # 	].join('\n')
+    # };
+    # ```
+    #
+    # *Please Note* that clients might sanitize the return markdown. A client could
+    # decide to remove HTML from the markdown to avoid script execution.
+
+    # The type of the Markup
+    kind: MarkupKind
+
+    # The content itself
+    value: str
 
 
 class TraceValue(Enum):

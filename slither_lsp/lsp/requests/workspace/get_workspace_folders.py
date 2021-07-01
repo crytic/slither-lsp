@@ -20,7 +20,7 @@ class GetWorkspaceFoldersRequest(BaseRequest):
         :param context: The server context which tracks state for the server.
         :return: None
         """
-        if not context.client_capabilities.workspace and context.client_capabilities.workspace.workspace_folders:
+        if not (context.client_capabilities.workspace and context.client_capabilities.workspace.workspace_folders):
             raise CapabilitiesNotSupportedError(cls)
 
     @classmethod

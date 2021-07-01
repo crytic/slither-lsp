@@ -107,15 +107,121 @@ class WorkspaceFoldersServerCapabilities(SerializableStructure):
 
 
 @dataclass
+class FileOperationPatternKind(Enum):
+    """
+    Defines a pattern kind describing if a glob pattern matches a file a folder or both.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#fileOperationPatternKind
+    """
+    FILE = 'file'
+    FOLDER = 'folder'
+
+
+@dataclass
+class FileOperationPatternOptions(SerializableStructure):
+    """
+    Data structure which represents matching options for the file operation pattern.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#fileOperationPatternOptions
+    """
+    ignore_case: Optional[bool] = None
+
+
+@dataclass
+class FileOperationPattern(SerializableStructure):
+    """
+    Data structure which represents a pattern to describe in which file operation requests or notifications the
+    server is interested in.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#fileOperationPattern
+    """
+    # The glob pattern to match. Glob patterns can have the following syntax:
+    # - `*` to match one or more characters in a path segment
+    # - `?` to match on one character in a path segment
+    # - `**` to match any number of path segments, including none
+    # - `{}` to group sub patterns into an OR expression. (e.g. `**​/*.{ts,js}`
+    #   matches all TypeScript and JavaScript files)
+    # - `[]` to declare a range of characters to match in a path segment
+    #   (e.g., `example.[0-9]` to match on `example.0`, `example.1`, …)
+    # - `[!...]` to negate a range of characters to match in a path segment
+    #   (e.g., `example.[!0-9]` to match on `example.a`, `example.b`, but
+    #   not `example.0`)
+    glob: str
+
+    # Whether to match files or folders with this pattern.
+    # Matches both if undefined.
+    matches: Optional[FileOperationPatternKind]
+
+    # Additional options used during matching.
+    options: Optional[FileOperationPatternOptions]
+
+
+@dataclass
+class FileOperationFilter(SerializableStructure):
+    """
+    Data structure which represents a filter to describe in which file operation requests or notifications the
+    server is interested in.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#fileOperationFilter
+    """
+    # A Uri like `file` or `untitled`.
+    scheme: Optional[str]
+
+    # The actual file operation pattern.
+    pattern: FileOperationPattern
+
+
+@dataclass
+class FileOperationRegistrationOptions(SerializableStructure):
+    """
+    Data structure which represents the options to register for file operations.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#fileOperationRegistrationOptions
+    """
+    # The actual filters.
+    filters: List[FileOperationFilter]
+
+
+@dataclass
+class WorkspaceFileOperationsServerCapabilities(SerializableStructure):
+    """
+    Data structure which represents workspace file operation server capabilities.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#serverCapabilities
+    """
+    # The server is interested in receiving didCreateFiles notifications.
+    did_create: Optional[FileOperationRegistrationOptions]
+
+    # The server is interested in receiving willCreateFiles requests.
+    will_create: Optional[FileOperationRegistrationOptions]
+
+    # The server is interested in receiving didRenameFiles notifications.
+    did_rename: Optional[FileOperationRegistrationOptions]
+
+    # The server is interested in receiving willRenameFiles requests.
+    will_rename: Optional[FileOperationRegistrationOptions]
+
+    # The server is interested in receiving didDeleteFiles file notifications.
+    did_delete: Optional[FileOperationRegistrationOptions]
+
+    # The server is interested in receiving willDeleteFiles file requests.
+    will_delete: Optional[FileOperationRegistrationOptions]
+
+
+@dataclass
 class WorkspaceServerCapabilities(SerializableStructure):
     """
     Data structure which represents workspace specific server capabilities.
     References:
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#serverCapabilities
     """
-    workspace_folders: Optional[WorkspaceFoldersServerCapabilities] = field(
-        default_factory=WorkspaceFoldersServerCapabilities
-    )
+    # The server supports workspace folder.
+    # @since 3.6.0
+    workspace_folders: Optional[WorkspaceFoldersServerCapabilities] = None
+
+    # The server is interested in file notifications/requests.
+    # @since 3.16.0
+    file_operations: Optional[WorkspaceFileOperationsServerCapabilities] = None
 
 
 @dataclass
@@ -154,7 +260,7 @@ class ServerCapabilities(SerializableStructure):
     document_highlight_provider: Union[bool, DocumentHighlightOptions, None] = None
 
     # Workspace specific server capabilities
-    workspace: Optional[WorkspaceServerCapabilities] = field(default_factory=WorkspaceServerCapabilities)
+    workspace: Optional[WorkspaceServerCapabilities] = None
 
 # endregion
 
@@ -428,6 +534,36 @@ class WorkspaceEditClientCapabilities(SerializableStructure):
 
 
 @dataclass
+class WorkspaceFileOperationsClientCapabilities(SerializableStructure):
+    """
+     Data structure which represents a subsection of client capabilities for file requests/notifications.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#clientCapabilities
+     """
+    # Whether the client supports dynamic registration for file
+    # requests/notifications.
+    dynamic_registration: Optional[bool]
+
+    # The client has support for sending didCreateFiles notifications.
+    did_create: Optional[bool]
+
+    # The client has support for sending willCreateFiles requests.
+    will_create: Optional[bool]
+
+    # The client has support for sending didRenameFiles notifications.
+    did_rename: Optional[bool]
+
+    # The client has support for sending willRenameFiles requests.
+    will_rename: Optional[bool]
+
+    # The client has support for sending didDeleteFiles notifications.
+    did_delete: Optional[bool]
+
+    # The client has support for sending willDeleteFiles requests.
+    will_delete: Optional[bool]
+
+
+@dataclass
 class WorkspaceClientCapabilities(SerializableStructure):
     """
      Data structure which represents workspace specific client capabilities.
@@ -452,10 +588,42 @@ class WorkspaceClientCapabilities(SerializableStructure):
     # @since 3.6.0
     configuration: Optional[bool] = None
 
-    # TODO: semanticTokens, codeLens, fileOperations, textDocument, window, general,
+    # TODO: semanticTokens, codeLens
+
+    # The client has support for file requests/notifications.
+    # @since 3.16.0
+    file_operations: Optional[WorkspaceFileOperationsClientCapabilities] = None
+
+    # TODO: textDocument, window, general,
 
     # Experimental client capabilities.
     experimental: Any = None
+
+
+@dataclass
+class MarkdownClientCapabilities(SerializableStructure):
+    """
+     Data structure which represents client capabilities specific to the used markdown parser.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#markdownClientCapabilities
+     """
+    # The name of the parser.
+    parser: str
+
+    # The version of the parser.
+    version: Optional[str]
+
+
+@dataclass
+class GeneralClientCapabilities(SerializableStructure):
+    """
+     Data structure which represents a subsection of client capabilities
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#clientCapabilities
+     """
+    # Client capabilities specific to the client's markdown parser.
+    # @since 3.16.0
+    markdown: Optional[MarkdownClientCapabilities]
 
 
 @dataclass
@@ -466,12 +634,16 @@ class ClientCapabilities(SerializableStructure):
         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#clientCapabilities
     """
     # Workspace specific client capabilities.
-    workspace: Optional[WorkspaceClientCapabilities] = field(default_factory=WorkspaceClientCapabilities)
+    workspace: Optional[WorkspaceClientCapabilities] = None
 
     # Window specific client capabilities.
-    window: Optional[WindowClientCapabilities] = field(default_factory=WindowClientCapabilities)
+    window: Optional[WindowClientCapabilities] = None
 
     # Text document specific client capabilities.
-    text_document: Optional[TextDocumentClientCapabilities] = field(default_factory=TextDocumentClientCapabilities)
+    text_document: Optional[TextDocumentClientCapabilities] = None
+
+    # General client capabilities.
+    # @since 3.16.0
+    general: Optional[GeneralClientCapabilities] = None
 
 # endregion

@@ -13,15 +13,6 @@ class TestClassA(SerializableStructure):
 class TestClassB(TestClassA):
     num2: int
 
-
-def test_basic_inheritance():
-    b = TestClassB(0, 7)
-    result = b.to_dict()
-    assert 'num' in result and 'num2' in result
-    b_copy = TestClassB.from_dict(b.to_dict())
-    assert b.num == b_copy.num and b.num2 == b_copy.num2
-
-
 @dataclass
 class TestComplexTypeHints(SerializableStructure):
     super_union: Union[bool, Union[str, str, bool, Union[TestClassA, None], None], None]
@@ -38,26 +29,33 @@ class TestComplexTypeHints(SerializableStructure):
     test_basic_list2: list = field(default_factory=list)
     excluded_null: Optional[str] = None
     included_null: Optional[str] = field(default=None, metadata=serialization_metadata(include_none=True))
+    constant_test: str = field(default='CONSTANT_VALUE', metadata=serialization_metadata(enforce_as_constant=True))
+
+
+# Create a basic structure
+testComplexTypeHints = TestComplexTypeHints(
+    super_union=TestClassA(0),
+    statuses=[True, True, False, True],
+    texts=["ok", "OK"],
+    ids=["id1", 2, "id3", 4],
+    commands=["cmd", "-c", "echo hi"],
+    test=[[], [[[]]], [[["hi", "ok"]]]],
+    test_basic_list=["ok", "ok2", "ok3", 7, [7, 8, 9]],
+    test_basic_list2=["ok4", "ok5", "ok6", 1, [2, 3, 4]],
+)
+
+
+def test_basic_inheritance():
+    b = TestClassB(0, 7)
+    result = b.to_dict()
+    assert 'num' in result and 'num2' in result
+    b_copy = TestClassB.from_dict(b.to_dict())
+    assert b.num == b_copy.num and b.num2 == b_copy.num2
 
 
 def test_deserialization():
-    # Create a basic structure
-    b = TestComplexTypeHints(
-        super_union=TestClassA(0),
-        statuses=[True, True, False, True],
-        texts=["ok", "OK"],
-        ids=["id1", 2, "id3", 4],
-        commands=["cmd", "-c", "echo hi"],
-        test=[[], [[[]]], [[["hi", "ok"]]]],
-        test_basic_list=["ok", "ok2", "ok3", 7, [7, 8, 9]],
-        test_basic_list2=["ok4", "ok5", "ok6", 1, [2, 3, 4]],
-    )
-
-    # Serialize it
-    serialized = b.to_dict()
-
-    # Verify our name override is valid
-    assert 'SPECIAL_NAME_BOOL' in serialized
+    # Serialize testComplexTypeHints
+    serialized = testComplexTypeHints.to_dict()
 
     # Verify our included/excluded null values are/aren't there, as expected.
     assert 'includedNull' in serialized
@@ -65,4 +63,26 @@ def test_deserialization():
 
     # Verify round trip serialization
     b_copy = TestComplexTypeHints.from_dict(serialized)
-    assert b == b_copy
+    assert testComplexTypeHints == b_copy
+
+
+def test_name_override():
+    # Serialize testComplexTypeHints
+    serialized = testComplexTypeHints.to_dict()
+
+    # Verify our name override is valid
+    assert 'SPECIAL_NAME_BOOL' in serialized
+
+
+def test_enforce_as_constant():
+    # Serialize testComplexTypeHints
+    serialized = testComplexTypeHints.to_dict()
+
+    # Set a bad value for the constant in the dictionary and try to deserialize.
+    failed_bad_constant = False
+    try:
+        serialized['constantTest'] = 'BAD_CONSTANT_VALUE'
+        b_failed_example = TestComplexTypeHints.from_dict(serialized)
+    except ValueError:
+        failed_bad_constant = True
+    assert failed_bad_constant

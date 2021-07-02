@@ -42,4 +42,8 @@ class FindReferencesHandler(BaseRequestHandler):
             result=result
         )
 
+        # Serialize our result if we have one.
+        if result is not None:
+            result = [location.to_dict() for location in result]
+
         return result

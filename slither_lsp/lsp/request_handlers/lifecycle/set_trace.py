@@ -20,7 +20,10 @@ class SetTraceHandler(BaseRequestHandler):
 
         # Set our value and emit a relevant event.
         context.trace = params.value
-        context.event_emitter.emit('trace.set', context.trace)
+        context.event_emitter.emit(
+            'trace.set',
+            params=params
+        )
 
         # Notifications do not return a response
         return None

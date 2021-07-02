@@ -2,6 +2,7 @@ from typing import Any
 
 from slither_lsp.lsp.request_handlers.base_handler import BaseRequestHandler
 from slither_lsp.lsp.state.server_context import ServerContext
+from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
 from slither_lsp.lsp.types.params import DeclarationParams
 
 
@@ -41,5 +42,15 @@ class GoToDeclarationHandler(BaseRequestHandler):
             params=params,
             result=result
         )
+
+        # Serialize our result depending on the type.
+        if result is not None:
+            if isinstance(result, SerializableStructure):
+                result = result.to_dict()
+            elif isinstance(result, list):
+                result = [
+                    result_element.to_dict() if isinstance(result_element, SerializableStructure) else result_element
+                    for result_element in result
+                ]
 
         return result

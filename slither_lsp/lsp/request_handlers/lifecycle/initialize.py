@@ -34,9 +34,16 @@ class InitializeHandler(BaseRequestHandler):
         # Parse client capabilities
         context.client_capabilities = params.capabilities
 
+        # Create our initialization result
+        result = InitializeResult(context.server_capabilities, context.server_info)
+
         # Set our server as initialized, trigger relevant event
         context.server_initialized = True
-        context.event_emitter.emit('server.initialized')
+        context.event_emitter.emit(
+            'server.initialized',
+            params=params,
+            result=result
+        )
 
         # Return our server capabilities
-        return InitializeResult(context.server_capabilities, context.server_info).to_dict()
+        return result.to_dict()

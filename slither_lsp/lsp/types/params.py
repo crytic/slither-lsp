@@ -204,6 +204,76 @@ class DidChangeWorkspaceFoldersParams(SerializableStructure):
 
 
 @dataclass
+class FileCreate(SerializableStructure):
+    """
+    Data structure which represents information on a file/folder create.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#fileCreate
+    """
+    # A file:// URI for the location of the file/folder being created.
+    uri: str
+
+
+@dataclass
+class CreateFilesParams(SerializableStructure):
+    """
+    Data structure which represents the parameters sent in notifications/requests for user-initiated creation of files.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#createFilesParams
+    """
+    # An array of all files/folders created in this operation.
+    files: List[FileCreate]
+
+
+@dataclass
+class FileRename(SerializableStructure):
+    """
+    Data structure which represents information on a file/folder rename.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#fileRename
+    """
+    # A file:// URI for the original location of the file/folder being renamed.
+    old_uri: str
+
+    # A file:// URI for the new location of the file/folder being renamed.
+    new_uri: str
+
+
+@dataclass
+class RenameFilesParams(SerializableStructure):
+    """
+    Data structure which represents the parameters sent in notifications/requests for user-initiated renames of files.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#renameFilesParams
+    """
+    # An array of all files/folders renamed in this operation. When a folder is renamed, only the folder will be
+    # included, and not its children.
+    files: List[FileRename]
+
+
+@dataclass
+class FileDelete(SerializableStructure):
+    """
+    Data structure which represents information on a file/folder delete.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#fileDelete
+    """
+    # A file:// URI for the location of the file/folder being deleted.
+    uri: str
+
+
+@dataclass
+class DeleteFilesParams(SerializableStructure):
+    """
+    Data structure which represents the parameters sent in notifications/requests for user-initiated deletes of files.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#deleteFilesParams
+    """
+    # An array of all files/folders deleted in this operation.
+    files: List[FileDelete]
+
+
+@dataclass
 class DidOpenTextDocumentParams(SerializableStructure):
     """
     Data structure which represents 'textDocument/didOpen' notifications.

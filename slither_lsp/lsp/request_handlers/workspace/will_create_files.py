@@ -1,20 +1,21 @@
 from typing import Any
 
 from slither_lsp.lsp.request_handlers.base_handler import BaseRequestHandler
-from slither_lsp.lsp.types.errors import CapabilitiesNotSupportedError
 from slither_lsp.lsp.state.server_context import ServerContext
-from slither_lsp.lsp.types.params import DidChangeWorkspaceFoldersParams
+from slither_lsp.lsp.types.errors import CapabilitiesNotSupportedError
+from slither_lsp.lsp.types.params import CreateFilesParams
 
 
-class DidChangeWorkspaceFolderHandler(BaseRequestHandler):
+class WillCreateFilesHandler(BaseRequestHandler):
     """
-    Handler for the 'workspace/didChangeWorkspaceFolders' notification, which notifies the server that the client
-    added or removed workspace folders.
+    Handler for the 'workspace/willCreateFiles' notification, which is sent from the client to the server before files
+    are actually created as long as the creation is triggered from within the client either by a user action or by
+    applying a workspace edit.
     References:
-        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_willCreateFiles
     """
 
-    method_name = "workspace/didChangeWorkspaceFolders"
+    method_name = "workspace/willCreateFiles"
 
     @classmethod
     def _check_capabilities(cls, context: ServerContext) -> None:
@@ -25,18 +26,19 @@ class DidChangeWorkspaceFolderHandler(BaseRequestHandler):
         """
 
         server_supported: bool = context.server_capabilities.workspace and \
-            context.server_capabilities.workspace.workspace_folders and \
-            context.server_capabilities.workspace.workspace_folders.supported
+            context.server_capabilities.workspace.file_operations and \
+            context.server_capabilities.workspace.file_operations.will_create is not None
         if not server_supported:
             raise CapabilitiesNotSupportedError(cls)
 
     @classmethod
     def process(cls, context: ServerContext, params: Any) -> Any:
         """
-        Handles a 'workspace/didChangeWorkspaceFolders' notification which indicates that workspace folders were added
-        or removed.
+        Handles a 'workspace/willCreateFiles' notification which is sent from the client to the server before files are
+        actually created as long as the creation is triggered from within the client either by a user action or by
+        applying a workspace edit.
         References:
-            https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_didChangeWorkspaceFolders
+            https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#workspace_willCreateFiles
         :param context: The server context which determines the server to use to send the message.
         :param params: The parameters object provided with this message.
         :return: None
@@ -45,11 +47,11 @@ class DidChangeWorkspaceFolderHandler(BaseRequestHandler):
         cls._check_capabilities(context)
 
         # Validate the structure of our request
-        params: DidChangeWorkspaceFoldersParams = DidChangeWorkspaceFoldersParams.from_dict(params)
+        params: CreateFilesParams = CreateFilesParams.from_dict(params)
 
         # Emit relevant events
         context.event_emitter.emit(
-            'workspace.didChangeWorkspaceFolders',
+            'workspace.willCreateFiles',
             params=params
         )
 

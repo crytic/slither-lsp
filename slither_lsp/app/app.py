@@ -12,7 +12,9 @@ from slither_lsp.lsp.state.server_config import ServerConfig
 from slither_lsp.lsp.state.server_context import ServerContext
 from slither_lsp.lsp.types.basic_structures import MessageType, Diagnostic, Range, Position, DiagnosticSeverity
 from slither_lsp.lsp.types.capabilities import ServerCapabilities, WorkspaceServerCapabilities, \
-    WorkspaceFoldersServerCapabilities, TextDocumentSyncOptions, TextDocumentSyncKind, SaveOptions
+    WorkspaceFoldersServerCapabilities, TextDocumentSyncOptions, TextDocumentSyncKind, SaveOptions, \
+    WorkspaceFileOperationsServerCapabilities, FileOperationRegistrationOptions, FileOperationFilter, \
+    FileOperationPattern, FileOperationPatternKind, FileOperationPatternOptions
 from slither_lsp.lsp.types.params import ShowDocumentParams, LogMessageParams, ShowMessageParams
 from slither_lsp.lsp.requests.window.show_message import ShowMessageNotification
 from slither_lsp.lsp.requests.window.show_document import ShowDocumentRequest
@@ -41,6 +43,21 @@ class SlitherLSPApp:
         capabilities they can expect to leverage.
         :return: Returns the server capabilities to be used with the server.
         """
+        # Create our file operation registration options to know which files to watch.
+        file_operation_registration_options = FileOperationRegistrationOptions([
+            FileOperationFilter(
+                scheme='file',
+                pattern=FileOperationPattern(
+                    glob='**/*.sol',
+                    matches=FileOperationPatternKind.FILE,
+                    options=FileOperationPatternOptions(
+                        ignore_case=True
+                    )
+                )
+            )
+        ])
+
+        # Constructor our overall capabilities object.
         return ServerCapabilities(
             text_document_sync=TextDocumentSyncOptions(
                 open_close=True,
@@ -60,6 +77,14 @@ class SlitherLSPApp:
                 workspace_folders=WorkspaceFoldersServerCapabilities(
                     supported=True,
                     change_notifications=True
+                ),
+                file_operations=WorkspaceFileOperationsServerCapabilities(
+                    did_create=file_operation_registration_options,
+                    will_create=file_operation_registration_options,
+                    did_rename=file_operation_registration_options,
+                    will_rename=file_operation_registration_options,
+                    did_delete=file_operation_registration_options,
+                    will_delete=file_operation_registration_options
                 )
             )
         )

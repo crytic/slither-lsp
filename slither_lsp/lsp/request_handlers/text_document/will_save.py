@@ -2,7 +2,7 @@ from typing import Any
 
 from slither_lsp.lsp.request_handlers.base_handler import BaseRequestHandler
 from slither_lsp.lsp.state.server_context import ServerContext
-from slither_lsp.lsp.types.params import DidChangeTextDocumentParams, WillSaveTextDocumentParams
+from slither_lsp.lsp.types.params import WillSaveTextDocumentParams
 
 
 class WillSaveHandler(BaseRequestHandler):

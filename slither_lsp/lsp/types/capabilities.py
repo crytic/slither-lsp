@@ -2,8 +2,8 @@ from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 from typing import Any, Optional, Union, List
 
-from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
-from slither_lsp.lsp.types.basic_structures import DiagnosticTag
+from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure, serialization_metadata
+from slither_lsp.lsp.types.basic_structures import DiagnosticTag, DocumentFilter
 
 
 # region Server Capabilities
@@ -626,6 +626,19 @@ class WorkspaceEditClientCapabilities(SerializableStructure):
 
 
 @dataclass
+class DidChangeWatchedFilesClientCapabilities(SerializableStructure):
+    """
+     Data structure which describe a clients capabilities for reporting changes to watched files.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#didChangeWatchedFilesClientCapabilities
+    """
+    # Did change watched files notification supports dynamic registration.
+    # Please note that the current protocol doesn't support static
+    # configuration for file changes from the server side.
+    dynamic_registration: Optional[bool] = None
+
+
+@dataclass
 class WorkspaceFileOperationsClientCapabilities(SerializableStructure):
     """
      Data structure which represents a subsection of client capabilities for file requests/notifications.
@@ -670,7 +683,12 @@ class WorkspaceClientCapabilities(SerializableStructure):
     # Capabilities specific to `WorkspaceEdit`s
     workspace_edit: Optional[WorkspaceEditClientCapabilities] = None
 
-    # TODO: workspaceEdit, didChangeConfiguration, didChangeWatchedFiles, symbol, executeCommand
+    # TODO: workspaceEdit, didChangeConfiguration
+
+    # Capabilities specific to the `workspace/didChangeWatchedFiles` notification.
+    did_change_watched_files: Optional[DidChangeWatchedFilesClientCapabilities] = None
+
+    #  TODO: symbol, executeCommand
 
     # The client has support for workspace folders.
     # @since 3.6.0
@@ -739,3 +757,4 @@ class ClientCapabilities(SerializableStructure):
     general: Optional[GeneralClientCapabilities] = None
 
 # endregion
+

@@ -23,14 +23,6 @@ class InitializeHandler(BaseRequestHandler):
         context.client_info = params.client_info
         context.trace = params.trace
 
-        # Obtain workspace information. If we couldn't obtain any, try the older deprecated uri param
-        context.workspace_folders = params.workspace_folders or []
-        if len(context.workspace_folders) == 0:
-            if params.root_uri is not None:
-                context.workspace_folders = [
-                    WorkspaceFolder(name=None, uri=params.root_uri)
-                ]
-
         # Parse client capabilities
         context.client_capabilities = params.capabilities
 

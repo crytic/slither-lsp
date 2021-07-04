@@ -21,7 +21,6 @@ class ServerContext:
         self.client_info: Optional[ClientServerInfo] = None
         self.client_capabilities: ClientCapabilities = ClientCapabilities()
         self.server_capabilities: ServerCapabilities = server_capabilities or ServerCapabilities()
-        self.workspace_folders: List[WorkspaceFolder] = []
 
         # Create our analysis results structure
         self._analysis_results: Dict[int, Slither] = {}

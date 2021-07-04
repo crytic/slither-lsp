@@ -8,6 +8,7 @@ from slither_lsp.lsp.request_handlers.lifecycle.set_trace import SetTraceHandler
 
 # workspace
 from slither_lsp.lsp.request_handlers.workspace.did_change_workspace_folders import DidChangeWorkspaceFolderHandler
+from slither_lsp.lsp.request_handlers.workspace.did_change_watched_files import DidChangeWatchedFilesHandler
 from slither_lsp.lsp.request_handlers.workspace.will_create_files import WillCreateFilesHandler
 from slither_lsp.lsp.request_handlers.workspace.did_create_files import DidCreateFilesHandler
 from slither_lsp.lsp.request_handlers.workspace.will_rename_files import WillRenameFilesHandler

@@ -2,7 +2,7 @@ import re
 import inspect
 from abc import ABC, abstractmethod
 from dataclasses import fields, dataclass, is_dataclass
-from enum import Enum, IntEnum
+from enum import Enum, IntEnum, IntFlag
 from typing import Any, Optional, Type, Set, List, Union, get_args, get_origin, Tuple
 
 
@@ -116,7 +116,8 @@ class SerializableStructure(ABC):
         # Loop through all our satisfying types.
         for satisfying_type in satisfying_types:
 
-            if inspect.isclass(satisfying_type):
+            satisfying_type_is_class = inspect.isclass(satisfying_type)
+            if satisfying_type_is_class:
                 # Handle ints
                 if satisfying_type is int and isinstance(field_value, int) or \
                         satisfying_type is str and isinstance(field_value, str) or \
@@ -124,20 +125,28 @@ class SerializableStructure(ABC):
                         satisfying_type is bool and isinstance(field_value, bool):
                     return field_value
 
-                # Handle enums
-                if (issubclass(satisfying_type, IntEnum) and isinstance(field_value, satisfying_type)) or \
-                        (satisfying_type is Any and isinstance(field_value, IntEnum)):
-                    field_value: IntEnum
-                    return field_value.value
-                if (issubclass(satisfying_type, Enum) and isinstance(field_value, satisfying_type)) or \
-                        (satisfying_type is Any and isinstance(field_value, Enum)):
-                    field_value: Enum
-                    return field_value.value
+            # Handle enums
+            if (satisfying_type_is_class and issubclass(satisfying_type, IntEnum) and
+                isinstance(field_value, satisfying_type)) or \
+                    (satisfying_type is Any and isinstance(field_value, IntEnum)):
+                field_value: IntEnum
+                return field_value.value
+            if (satisfying_type_is_class and issubclass(satisfying_type, IntFlag) and
+                isinstance(field_value, satisfying_type)) or \
+                    (satisfying_type is Any and isinstance(field_value, IntFlag)):
+                field_value: IntFlag
+                return field_value.value
+            if (satisfying_type_is_class and issubclass(satisfying_type, Enum) and
+                isinstance(field_value, satisfying_type)) or \
+                    (satisfying_type is Any and isinstance(field_value, Enum)):
+                field_value: Enum
+                return field_value.value
 
-                # If our current satisfying type is a serializable structure and we have a dict, simply serialize it
-                if (issubclass(satisfying_type, SerializableStructure) and isinstance(field_value, satisfying_type)) \
-                        or (satisfying_type is Any and isinstance(field_value, SerializableStructure)):
-                    return field_value.to_dict()
+            # If our current satisfying type is a serializable structure and we have a dict, simply serialize it
+            if (satisfying_type_is_class and issubclass(satisfying_type, SerializableStructure) and
+                isinstance(field_value, satisfying_type)) or \
+                    (satisfying_type is Any and isinstance(field_value, SerializableStructure)):
+                return field_value.to_dict()
 
             # Handle lists if our field value is a list
             if isinstance(field_value, list):
@@ -242,8 +251,13 @@ class SerializableStructure(ABC):
                 # Handle enums
                 if issubclass(satisfying_type, IntEnum) and isinstance(serialized_value, int):
                     return satisfying_type(serialized_value)
+                if issubclass(satisfying_type, IntFlag) and isinstance(serialized_value, int):
+                    return satisfying_type(serialized_value)
                 if issubclass(satisfying_type, Enum) and isinstance(serialized_value, str):
                     return satisfying_type(serialized_value)
+
+                # Handle flags
+
 
                 # If our current satisfying type is a serializable structure and we have a dict, try to deserialize
                 # with it.

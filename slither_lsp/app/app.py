@@ -1,7 +1,15 @@
 import inspect
-from typing import Optional, Type, List
+from threading import Lock
+from typing import Optional, Type, List, Tuple
+
+from crytic_compile import CryticCompile, InvalidCompilation
+from crytic_compile.platform.solc_standard_json import SolcStandardJson
+from slither import Slither
 
 from slither_lsp.app.app_hooks import SlitherLSPHooks
+from slither_lsp.app.solidity_workspace import SolidityWorkspace
+from slither_lsp.app.types.analysis_structures import AnalysisResult
+from slither_lsp.app.types.compilation_structures import CompilationTarget, CompilationTargetType
 from slither_lsp.lsp.request_handlers.base_handler import BaseRequestHandler
 from slither_lsp.lsp.requests.workspace.get_workspace_folders import GetWorkspaceFoldersRequest
 from slither_lsp.lsp.requests.window.log_message import LogMessageNotification
@@ -27,14 +35,11 @@ class SlitherLSPApp:
     def __init__(self, port: Optional[int]):
         self.port: Optional[int] = port
         self.server: Optional[BaseServer] = None
-
-    @property
-    def context(self) -> ServerContext:
-        """
-        An alias for the ServerContext object used by the server.
-        :return: Returns the ServerContext object used by the server.
-        """
-        return self.server.context
+        self.solidity_workspace: Optional[SolidityWorkspace] = None
+        self.compilation_targets: List[CompilationTarget] = []
+        self.compilation_targets_autogenerate = True
+        self.analysis_results: List[AnalysisResult] = []
+        self.analysis_lock = Lock()
 
     @property
     def initial_server_capabilities(self) -> ServerCapabilities:
@@ -126,32 +131,38 @@ class SlitherLSPApp:
         # Subscribe to our events
         self.server.event_emitter.on('client.initialized', self.on_client_initialized)
 
+        # Create our solidity workspace so it can register relevant events
+        self.solidity_workspace = SolidityWorkspace(self)
+
         # Begin processing request_handlers
         self.server.start()
 
     def on_client_initialized(self):
         # TODO: Move main loop logic to kick off from here.
-        folders = GetWorkspaceFoldersRequest.send(self.context)
-        LogMessageNotification.send(self.context,
+        folders = GetWorkspaceFoldersRequest.send(self.server.context)
+        LogMessageNotification.send(self.server.context,
                                     LogMessageParams(type=MessageType.WARNING, message="TEST LOGGED MSG!"))
-        ShowMessageNotification.send(self.context,
+        ShowMessageNotification.send(self.server.context,
                                      ShowMessageParams(type=MessageType.ERROR, message="TEST SHOWN MSG!"))
         shown_doc = ShowDocumentRequest.send(
-            self.context,
+            self.server.context,
             ShowDocumentParams(
                 uri=r'file:///C:/Users/X/Documents/GitHub/testcontracts/compact.ast',
                 take_focus=True, external=None, selection=None
             )
         )
         PublishDiagnosticsNotification.send(
-            self.context,
-            PublishDiagnosticsParams(
+            context=self.server.context,
+            params=PublishDiagnosticsParams(
                 uri="TEST.BLAH",
                 version=None,
                 diagnostics=[
                     Diagnostic(
                         message="test diagnostic message",
-                        range=Range(Position(0, 0), Position(0, 0)),
+                        range=Range(
+                            start=Position(0, 0),
+                            end=Position(0, 0)
+                        ),
                         severity=DiagnosticSeverity.ERROR
                     )
                 ]
@@ -159,4 +170,65 @@ class SlitherLSPApp:
         )
         f = folders
 
+    def generate_compilation_targets(self) -> List[CompilationTarget]:
+        pass
 
+    def refresh(self):
+        """
+
+        :return:
+        """
+        # Create our new analyses list.
+        new_analyses: List[AnalysisResult] = []
+
+        # If we're supposed to generate compilation targets, do so and set them.
+        if self.compilation_targets_autogenerate:
+            self.compilation_targets = self.generate_compilation_targets()
+
+        # Loop through all compilation targets and analyze them.
+        for compilation_target in self.compilation_targets:
+            compilation: Optional[CryticCompile] = None
+            analysis = None
+            try:
+                # Compile our target
+                compilation = self.compile(compilation_target)
+
+                # Create our analysis.
+                analysis = Slither(compilation)
+
+                # Append our result
+                new_analyses.append(
+                    AnalysisResult(succeeded=True, compilation=compilation, analysis=analysis, error=None)
+                )
+            except Exception as err:
+                new_analyses.append(
+                    AnalysisResult(succeeded=False, compilation=compilation, analysis=analysis, error=err)
+                )
+
+        # Set our new analyses
+        with self.analysis_lock:
+            self.analysis_results = new_analyses
+
+    @staticmethod
+    def compile(compilation_settings: CompilationTarget) -> CryticCompile:
+        """
+        Compiles a target with the provided compilation settings using crytic-compile.
+        :return: Returns an instance of crytic-compile.
+        """
+        if compilation_settings.target_type == CompilationTargetType.BASIC:
+            # If the target type is a basic target and we have provided settings, pass them to crytic compile.
+            if compilation_settings.target_basic is not None:
+                # TODO: Add support for other arguments (solc_working_dir, etc)
+                return CryticCompile(compilation_settings.target_basic.target)
+
+        elif compilation_settings.target_type == CompilationTargetType.STANDARD_JSON:
+            # If the target type is standard json and we have provided settings, pass them to crytic compile.
+            if compilation_settings.target_standard_json is not None:
+                # TODO: Add support for other arguments (solc_working_dir, etc)
+                return CryticCompile(SolcStandardJson(compilation_settings.target_standard_json.target))
+
+        # Raise an exception if there was no relevant exception.
+        raise ValueError(
+            f"Could not compile target type {compilation_settings.target_type.name} as insufficient settings were "
+            f"provided."
+        )

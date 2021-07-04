@@ -179,6 +179,60 @@ class LogMessageParams(SerializableStructure):
 
 
 @dataclass
+class Registration(SerializableStructure):
+    """
+    Data structure which represents general parameters to register for a capability.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#registration
+    """
+    # The id used to register the request. The id can be used to deregister the request again.
+    id: str
+
+    # The method / capability to register for.
+    method: str
+
+    # Options necessary for the registration.
+    register_options: Any
+
+
+@dataclass
+class RegistrationParams(SerializableStructure):
+    """
+    Data structure which represents 'client/registerCapability' requests.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#registrationParams
+    """
+    registrations: List[Registration]
+
+
+@dataclass
+class Unregistration(SerializableStructure):
+    """
+    Data structure which represents general parameters to unregister a capability.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#unregistration
+    """
+    # The id used to unregister the request or notification. Usually an id provided during the register request.
+    id: str
+
+    # The method / capability to unregister for.
+    method: str
+
+
+@dataclass
+class UnregistrationParams(SerializableStructure):
+    """
+    Data structure which represents 'client/unregisterCapability' requests.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#unregistrationParams
+    """
+    # This should correctly be named `unregistrations`. However changing this
+    # is a breaking change and needs to wait until we deliver a 4.x version
+    # of the specification.
+    unregisterations: List[Unregistration]
+
+
+@dataclass
 class WorkspaceFoldersChangeEvent(SerializableStructure):
     """
     Data structure which represents workspace folder change event data.
@@ -201,6 +255,45 @@ class DidChangeWorkspaceFoldersParams(SerializableStructure):
     """
     # The actual workspace folder change event.
     event: WorkspaceFoldersChangeEvent = field(default_factory=WorkspaceFoldersChangeEvent)
+
+
+class FileChangeType(IntEnum):
+    """
+    The file event type.
+    """
+    # The file got created.
+    CREATED = 1
+
+    # The file got changed.
+    CHANGED = 2
+
+    # The file got deleted.
+    DELETED = 3
+
+
+@dataclass
+class FileEvent(SerializableStructure):
+    """
+    Data structure which represents an event describing a file change.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#fileEvent
+    """
+    # The file's URI.
+    uri: str
+
+    # The change type.
+    type: FileChangeType
+
+
+@dataclass
+class DidChangeWatchedFilesParams(SerializableStructure):
+    """
+    Data structure which represents 'workspace/didChangeWatchedFiles' notifications.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#didChangeWatchedFilesParams
+    """
+    # The actual file events.
+    changes: List[FileEvent]
 
 
 @dataclass

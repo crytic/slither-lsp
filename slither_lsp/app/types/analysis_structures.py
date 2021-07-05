@@ -4,6 +4,7 @@ from typing import Optional
 from crytic_compile import CryticCompile
 from slither import Slither
 
+from slither_lsp.app.types.compilation_structures import CompilationTarget
 from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
 
 
@@ -14,6 +15,9 @@ class AnalysisResult:
     """
     # Defines if our analysis succeeded
     succeeded: bool
+
+    # Our compilation target settings
+    compilation_target: CompilationTarget
 
     # Our compilation result
     compilation: Optional[CryticCompile]

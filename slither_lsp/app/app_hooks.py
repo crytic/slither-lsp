@@ -20,6 +20,14 @@ class SlitherLSPHooks(ServerHooks):
 
     def goto_definition(self, context: ServerContext, params: DefinitionParams) \
             -> Union[Location, List[Location], List[LocationLink], None]:
+        # Compile a list of definitions
+        definitions = []
+        # Loop through all compilations
+        with self.app.solidity_workspace.analyses_lock:
+            for analysis_result in self.app.solidity_workspace.analyses:
+                if analysis_result.analysis is not None:
+                    # TODO:
+                    pass
         return None
 
     def goto_type_definition(self, context: ServerContext, params: TypeDefinitionParams) \

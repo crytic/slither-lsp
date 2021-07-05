@@ -36,10 +36,6 @@ class SlitherLSPApp:
         self.port: Optional[int] = port
         self.server: Optional[BaseServer] = None
         self.solidity_workspace: Optional[SolidityWorkspace] = None
-        self.compilation_targets: List[CompilationTarget] = []
-        self.compilation_targets_autogenerate = True
-        self.analysis_results: List[AnalysisResult] = []
-        self.analysis_lock = Lock()
 
     @property
     def initial_server_capabilities(self) -> ServerCapabilities:
@@ -169,66 +165,3 @@ class SlitherLSPApp:
             )
         )
         f = folders
-
-    def generate_compilation_targets(self) -> List[CompilationTarget]:
-        pass
-
-    def refresh(self):
-        """
-
-        :return:
-        """
-        # Create our new analyses list.
-        new_analyses: List[AnalysisResult] = []
-
-        # If we're supposed to generate compilation targets, do so and set them.
-        if self.compilation_targets_autogenerate:
-            self.compilation_targets = self.generate_compilation_targets()
-
-        # Loop through all compilation targets and analyze them.
-        for compilation_target in self.compilation_targets:
-            compilation: Optional[CryticCompile] = None
-            analysis = None
-            try:
-                # Compile our target
-                compilation = self.compile(compilation_target)
-
-                # Create our analysis.
-                analysis = Slither(compilation)
-
-                # Append our result
-                new_analyses.append(
-                    AnalysisResult(succeeded=True, compilation=compilation, analysis=analysis, error=None)
-                )
-            except Exception as err:
-                new_analyses.append(
-                    AnalysisResult(succeeded=False, compilation=compilation, analysis=analysis, error=err)
-                )
-
-        # Set our new analyses
-        with self.analysis_lock:
-            self.analysis_results = new_analyses
-
-    @staticmethod
-    def compile(compilation_settings: CompilationTarget) -> CryticCompile:
-        """
-        Compiles a target with the provided compilation settings using crytic-compile.
-        :return: Returns an instance of crytic-compile.
-        """
-        if compilation_settings.target_type == CompilationTargetType.BASIC:
-            # If the target type is a basic target and we have provided settings, pass them to crytic compile.
-            if compilation_settings.target_basic is not None:
-                # TODO: Add support for other arguments (solc_working_dir, etc)
-                return CryticCompile(compilation_settings.target_basic.target)
-
-        elif compilation_settings.target_type == CompilationTargetType.STANDARD_JSON:
-            # If the target type is standard json and we have provided settings, pass them to crytic compile.
-            if compilation_settings.target_standard_json is not None:
-                # TODO: Add support for other arguments (solc_working_dir, etc)
-                return CryticCompile(SolcStandardJson(compilation_settings.target_standard_json.target))
-
-        # Raise an exception if there was no relevant exception.
-        raise ValueError(
-            f"Could not compile target type {compilation_settings.target_type.name} as insufficient settings were "
-            f"provided."
-        )

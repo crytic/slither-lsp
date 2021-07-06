@@ -143,6 +143,9 @@ class SolidityWorkspace:
             )
         )
 
+        # Queue for analysis on startup
+        self._queue_reanalysis()
+
         # Loop while a shutdown was not signalled, we want to keep performing reanalysis if there are valid changes
         # requiring it.
         while not self._shutdown and not self.app.server.context.shutdown:
@@ -170,8 +173,8 @@ class SolidityWorkspace:
         been met.
         :return: None
         """
-        self._analysis_last_change_time = 0
-        self._analysis_pending = 0 if force else time.time()
+        self._analysis_last_change_time = 0 if force else time.time()
+        self._analysis_pending = True
 
     def _on_server_initialized(self, params: InitializeParams, result: InitializeResult) -> None:
         """
@@ -314,6 +317,7 @@ class SolidityWorkspace:
                                 )
                             )
                         except Exception as err:
+                            # TODO: Add error logging message here.
                             self.analyses.append(
                                 AnalysisResult(
                                     succeeded=False,

@@ -423,7 +423,7 @@ class DidChangeTextDocumentParams(SerializableStructure):
     #    receive them.
     #  - apply the `TextDocumentContentChangeEvent`s in a single notification
     #    in the order you receive them.
-    content_changes: TextDocumentContentChangeEvent
+    content_changes: List[TextDocumentContentChangeEvent]
 
 
 class TextDocumentSaveReason(IntEnum):

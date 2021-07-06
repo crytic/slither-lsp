@@ -35,7 +35,7 @@ class SlitherLSPApp:
     def __init__(self, port: Optional[int]):
         self.port: Optional[int] = port
         self.server: Optional[BaseServer] = None
-        self.solidity_workspace: Optional[SolidityWorkspace] = None
+        self.workspace: Optional[SolidityWorkspace] = None
 
     @property
     def initial_server_capabilities(self) -> ServerCapabilities:
@@ -44,20 +44,6 @@ class SlitherLSPApp:
         capabilities they can expect to leverage.
         :return: Returns the server capabilities to be used with the server.
         """
-        # Create our file operation registration options to know which files to watch.
-        file_operation_registration_options = FileOperationRegistrationOptions([
-            FileOperationFilter(
-                scheme='file',
-                pattern=FileOperationPattern(
-                    glob='**/*.sol',
-                    matches=FileOperationPatternKind.FILE,
-                    options=FileOperationPatternOptions(
-                        ignore_case=True
-                    )
-                )
-            )
-        ])
-
         # Constructor our overall capabilities object.
         return ServerCapabilities(
             text_document_sync=TextDocumentSyncOptions(
@@ -78,14 +64,6 @@ class SlitherLSPApp:
                 workspace_folders=WorkspaceFoldersServerCapabilities(
                     supported=True,
                     change_notifications=True
-                ),
-                file_operations=WorkspaceFileOperationsServerCapabilities(
-                    did_create=file_operation_registration_options,
-                    will_create=file_operation_registration_options,
-                    did_rename=file_operation_registration_options,
-                    will_rename=file_operation_registration_options,
-                    did_delete=file_operation_registration_options,
-                    will_delete=file_operation_registration_options
                 )
             )
         )
@@ -128,7 +106,7 @@ class SlitherLSPApp:
         self.server.event_emitter.on('client.initialized', self.on_client_initialized)
 
         # Create our solidity workspace so it can register relevant events
-        self.solidity_workspace = SolidityWorkspace(self)
+        self.workspace = SolidityWorkspace(self)
 
         # Begin processing request_handlers
         self.server.start()

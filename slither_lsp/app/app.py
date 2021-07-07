@@ -8,8 +8,7 @@ from slither import Slither
 
 from slither_lsp.app.app_hooks import SlitherLSPHooks
 from slither_lsp.app.solidity_workspace import SolidityWorkspace
-from slither_lsp.app.types.analysis_structures import AnalysisResult
-from slither_lsp.app.types.compilation_structures import CompilationTarget, CompilationTargetType
+from slither_lsp.app.types.analysis_structures import AnalysisResult, CompilationTarget, CompilationTargetType
 from slither_lsp.lsp.request_handlers.base_handler import BaseRequestHandler
 from slither_lsp.lsp.requests.workspace.get_workspace_folders import GetWorkspaceFoldersRequest
 from slither_lsp.lsp.requests.window.log_message import LogMessageNotification
@@ -112,34 +111,9 @@ class SlitherLSPApp:
         self.server.start()
 
     def on_client_initialized(self):
-        # TODO: Move main loop logic to kick off from here.
+        # TODO: Remove this event handler entirely, it exists temporarily only for testing.
         folders = GetWorkspaceFoldersRequest.send(self.server.context)
         LogMessageNotification.send(self.server.context,
                                     LogMessageParams(type=MessageType.WARNING, message="TEST LOGGED MSG!"))
         ShowMessageNotification.send(self.server.context,
                                      ShowMessageParams(type=MessageType.ERROR, message="TEST SHOWN MSG!"))
-        shown_doc = ShowDocumentRequest.send(
-            self.server.context,
-            ShowDocumentParams(
-                uri=r'file:///C:/Users/X/Documents/GitHub/testcontracts/compact.ast',
-                take_focus=True, external=None, selection=None
-            )
-        )
-        PublishDiagnosticsNotification.send(
-            context=self.server.context,
-            params=PublishDiagnosticsParams(
-                uri="TEST.BLAH",
-                version=None,
-                diagnostics=[
-                    Diagnostic(
-                        message="test diagnostic message",
-                        range=Range(
-                            start=Position(0, 0),
-                            end=Position(0, 0)
-                        ),
-                        severity=DiagnosticSeverity.ERROR
-                    )
-                ]
-            )
-        )
-        f = folders

@@ -11,12 +11,42 @@ from slither.core.source_mapping.source_mapping import Source
 
 
 class SlitherLSPHooks(ServerHooks):
+    """
+    Defines a set of hooks to fulfill core language feature requests for the Language Server Protocol, leveraging
+    slither for analysis.
+    """
     def __init__(self, app):
         # Late import to avoid circular reference issues
         from slither_lsp.app.app import SlitherLSPApp
 
         # Set our parameters.
         self.app: SlitherLSPApp = app
+
+    @staticmethod
+    def _source_to_location(source: Source) -> Optional[Location]:
+        """
+        Converts a slither Source mapping object into a Language Server Protocol Location.
+        :param source: The slither Source mapping object to convert into a Location.
+        :return: Returns a Location representing the slither Source mapping object. None if no valid mapping exists.
+        """
+        # If there are no mapped lines, we don't return a location.
+        if len(source.lines) == 0:
+            return None
+
+        # Otherwise we can return a location fairly easily.
+        return Location(
+            uri=fs_path_to_uri(source.filename.absolute),
+            range=Range(
+                start=Position(
+                    line=source.lines[0] - 1,
+                    character=source.starting_column - 1
+                ),
+                end=Position(
+                    line=source.lines[-1] - 1,
+                    character=source.ending_column - 1
+                )
+            )
+        )
 
     def goto_declaration(self, context: ServerContext, params: DeclarationParams) \
             -> Union[Location, List[Location], List[LocationLink], None]:
@@ -36,7 +66,7 @@ class SlitherLSPHooks(ServerHooks):
                     target_filename = analysis_result.compilation.filename_lookup(target_filename_str)
 
                     # Obtain the offset for this line + character position
-                    target_offset = analysis_result.compilation.get_global_offset_from_line(
+                    target_offset = analysis_result.compilation.get_global_offset_from_line_and_character(
                         target_filename,
                         params.position.line + 1,
                         params.position.character + 1
@@ -50,22 +80,9 @@ class SlitherLSPHooks(ServerHooks):
 
                     # Add all definitions from this source.
                     for source in sources:
-                        if len(source.lines) > 0:
-                            definitions.append(
-                                Location(
-                                    uri=fs_path_to_uri(source.filename.absolute),
-                                    range=Range(
-                                        start=Position(
-                                            line=source.lines[0] - 1,
-                                            character=source.starting_column - 1
-                                        ),
-                                        end=Position(
-                                            line=source.lines[-1] - 1,
-                                            character=source.ending_column - 1
-                                        )
-                                    )
-                                )
-                            )
+                        source_location: Optional[Location] = self._source_to_location(source)
+                        if source_location is not None:
+                            definitions.append(source_location)
 
         return definitions
 
@@ -91,7 +108,7 @@ class SlitherLSPHooks(ServerHooks):
                     target_filename = analysis_result.compilation.filename_lookup(target_filename_str)
 
                     # Obtain the offset for this line + character position
-                    target_offset = analysis_result.compilation.get_global_offset_from_line(
+                    target_offset = analysis_result.compilation.get_global_offset_from_line_and_character(
                         target_filename,
                         params.position.line + 1,
                         params.position.character + 1
@@ -105,21 +122,8 @@ class SlitherLSPHooks(ServerHooks):
 
                     # Add all references from this source.
                     for source in sources:
-                        if len(source.lines) > 0:
-                            references.append(
-                                Location(
-                                    uri=fs_path_to_uri(source.filename.absolute),
-                                    range=Range(
-                                        start=Position(
-                                            line=source.lines[0] - 1,
-                                            character=source.starting_column - 1
-                                        ),
-                                        end=Position(
-                                            line=source.lines[-1] - 1,
-                                            character=source.ending_column - 1
-                                        )
-                                    )
-                                )
-                            )
+                        source_location: Optional[Location] = self._source_to_location(source)
+                        if source_location is not None:
+                            references.append(source_location)
 
         return references

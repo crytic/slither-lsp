@@ -6,7 +6,8 @@ from slither_lsp.app.utils.file_paths import uri_to_fs_path, fs_path_to_uri
 from slither_lsp.lsp.state.server_context import ServerContext
 from slither_lsp.lsp.state.server_hooks import ServerHooks
 from slither_lsp.lsp.types.basic_structures import Location, LocationLink, Range, Position
-from slither_lsp.lsp.types.params import ImplementationParams, TypeDefinitionParams, DefinitionParams, DeclarationParams
+from slither_lsp.lsp.types.params import ImplementationParams, TypeDefinitionParams, DefinitionParams, \
+    DeclarationParams, HoverParams, Hover
 from slither.core.source_mapping.source_mapping import Source
 
 
@@ -15,6 +16,7 @@ class SlitherLSPHooks(ServerHooks):
     Defines a set of hooks to fulfill core language feature requests for the Language Server Protocol, leveraging
     slither for analysis.
     """
+
     def __init__(self, app):
         # Late import to avoid circular reference issues
         from slither_lsp.app.app import SlitherLSPApp
@@ -48,8 +50,14 @@ class SlitherLSPHooks(ServerHooks):
             )
         )
 
+    def hover(self, context: ServerContext, params: HoverParams) -> Optional[Hover]:
+        # TODO: Return a hover object in response, if applicable.
+        #  Example: Hover(contents="TEST HOVER TEXT", range=None)
+        return None
+
     def goto_declaration(self, context: ServerContext, params: DeclarationParams) \
             -> Union[Location, List[Location], List[LocationLink], None]:
+        # TODO:
         return None
 
     def goto_definition(self, context: ServerContext, params: DefinitionParams) \
@@ -93,10 +101,12 @@ class SlitherLSPHooks(ServerHooks):
 
     def goto_type_definition(self, context: ServerContext, params: TypeDefinitionParams) \
             -> Union[Location, List[Location], List[LocationLink], None]:
+        # TODO:
         return None
 
     def goto_implementation(self, context: ServerContext, params: ImplementationParams) \
             -> Union[Location, List[Location], List[LocationLink], None]:
+        # TODO:
         return None
 
     def find_references(self, context: ServerContext, params: ImplementationParams) \

@@ -5,7 +5,7 @@ from typing import Union, Any, Optional, List
 
 from slither_lsp.lsp.types.capabilities import ClientCapabilities, ServerCapabilities
 from slither_lsp.lsp.types.basic_structures import ClientServerInfo, TraceValue, WorkspaceFolder, MessageType, Range, \
-    Diagnostic, TextDocumentIdentifier, Position, TextDocumentItem, VersionedTextDocumentIdentifier
+    Diagnostic, TextDocumentIdentifier, Position, TextDocumentItem, VersionedTextDocumentIdentifier, MarkupContent
 from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure
 
 
@@ -506,6 +506,45 @@ class TextDocumentPositionParams(SerializableStructure):
 
     # The position inside the text document.
     position: Position = field(default_factory=Position)
+
+
+@dataclass
+class HoverParams(TextDocumentPositionParams, WorkDoneProgressParams):
+    """
+    Data structure which represents 'textDocument/hover' request parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#hoverParams
+    """
+    # Note: For now this just inherits from its base classes.
+    pass
+
+
+@dataclass
+class HoverMarkedStringLanguageValue(SerializableStructure):
+    """
+    Data structure which represents a subsection of 'textDocument/hover' response parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#hover
+    """
+    language: str
+    value: str
+
+
+@dataclass
+class Hover(SerializableStructure):
+    """
+    Data structure which represents 'textDocument/hover' response parameters.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#hover
+    """
+    # The hover's content.
+    contents: Union[HoverMarkedStringLanguageValue, str, List[Union[HoverMarkedStringLanguageValue, str]], MarkupContent] = field(
+        default_factory=list
+    )
+
+    # An optional range is a range inside a text document
+    # that is used to visualize a hover, e.g. by changing the background color.
+    range: Optional[Range] = None
 
 
 @dataclass

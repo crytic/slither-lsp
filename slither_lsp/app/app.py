@@ -54,6 +54,7 @@ class SlitherLSPApp:
                     include_text=True
                 )
             ),
+            hover_provider=True,
             declaration_provider=True,
             definition_provider=True,
             type_definition_provider=True,

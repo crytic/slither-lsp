@@ -25,6 +25,7 @@ from slither_lsp.lsp.request_handlers.text_document.did_save import DidSaveHandl
 from slither_lsp.lsp.request_handlers.text_document.did_close import DidCloseHandler
 
 # language features
+from slither_lsp.lsp.request_handlers.text_document.hover import HoverHandler
 from slither_lsp.lsp.request_handlers.text_document.goto_declaration import GoToDeclarationHandler
 from slither_lsp.lsp.request_handlers.text_document.goto_definition import GoToDefinitionHandler
 from slither_lsp.lsp.request_handlers.text_document.goto_type_definition import GoToTypeDefinitionHandler

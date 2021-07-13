@@ -3,7 +3,7 @@ from enum import Enum, IntEnum
 from typing import Any, Optional, Union, List
 
 from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure, serialization_metadata
-from slither_lsp.lsp.types.basic_structures import DiagnosticTag, DocumentFilter
+from slither_lsp.lsp.types.basic_structures import DiagnosticTag, DocumentFilter, MarkupKind
 
 
 # region Server Capabilities
@@ -18,6 +18,17 @@ class WorkDoneProgressOptions(SerializableStructure):
     """
 
     work_done_progress: Optional[bool] = None
+
+
+@dataclass
+class HoverOptions(WorkDoneProgressOptions):
+    """
+    Data structure which represents hover options provided via capabilities.
+    References:
+        https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#hoverOptions
+    """
+    # NOTE: This simply inherits from WorkDoneProgressOptions for now
+    pass
 
 
 @dataclass
@@ -297,6 +308,9 @@ class ServerCapabilities(SerializableStructure):
     # `TextDocumentSyncKind.None`.
     text_document_sync: Union[TextDocumentSyncOptions, TextDocumentSyncKind, None] = None
 
+    # The server provides hover support.
+    hover_provider: Union[bool, HoverOptions, None] = None
+
     # The server provides go to declaration support.
     # @since 3.14.0
     # TODO: Once we add DeclarationRegistrationOptions, we need to add logic for it here, as it should be another
@@ -403,6 +417,22 @@ class PublishDiagnosticsClientCapabilities(SerializableStructure):
     # `textDocument/codeAction` request.
     # @since 3.16.0
     data_support: Optional[bool] = None
+
+
+@dataclass
+class HoverClientCapabilities(SerializableStructure):
+    """
+     Data structure which contains capabilities specific to the 'textDocument/hover' request.
+     References:
+         https://microsoft.github.io/language-server-protocol/specifications/specification-3-17/#hoverClientCapabilities
+    """
+    # Whether hover supports dynamic registration.
+    dynamic_registration: Optional[bool] = None
+
+    # Client supports the follow content formats if the content
+    # property refers to a `literal of type MarkupContent`.
+    # The order describes the preferred format of the client.
+    content_format: Optional[List[MarkupKind]] = None
 
 
 @dataclass
@@ -524,7 +554,12 @@ class TextDocumentClientCapabilities(SerializableStructure):
     # Text synchronization capabilities
     synchronization: Optional[TextDocumentSyncClientCapabilities] = None
 
-    # TODO: completion, hover, signatureHelp
+    # TODO: completion
+
+    # Capabilities specific to the `textDocument/hover` request.
+    hover: Optional[HoverClientCapabilities] = None
+
+    # TODO: signatureHelp
 
     # Capabilities specific to the `textDocument/declaration` request.
     # @since 3.14.0

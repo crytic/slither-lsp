@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from slither_lsp.lsp.requests.base_request import BaseRequest
 from slither_lsp.lsp.types.errors import CapabilitiesNotSupportedError
@@ -24,7 +24,7 @@ class GetWorkspaceFoldersRequest(BaseRequest):
             raise CapabilitiesNotSupportedError(cls)
 
     @classmethod
-    def send(cls, context: ServerContext) -> List[WorkspaceFolder]:
+    def send(cls, context: ServerContext) -> Optional[List[WorkspaceFolder]]:
         """
         Sends a 'workspace/workspaceFolders' request to the client to obtain workspace folders.
         References:
@@ -41,9 +41,9 @@ class GetWorkspaceFoldersRequest(BaseRequest):
             None
         )
 
-        # Verify our result is a list
-        if not isinstance(workspace_folders, list):
-            raise ValueError(f'{cls.method_name} request returned a non list type response.')
+        # If our workspace is None, we return None.
+        if workspace_folders is None:
+            return None
 
         # Parse our data
         workspace_folders = [WorkspaceFolder.from_dict(folder) for folder in workspace_folders]

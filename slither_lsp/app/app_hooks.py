@@ -61,22 +61,27 @@ class SlitherLSPHooks(ServerHooks):
         with self.app.workspace.analyses_lock:
             for analysis_result in self.app.workspace.analyses:
                 if analysis_result.analysis is not None:
-                    # Obtain our filename for this file
-                    target_filename_str: str = uri_to_fs_path(params.text_document.uri)
-                    target_filename = analysis_result.compilation.filename_lookup(target_filename_str)
+                    # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
+                    #  these functions.
+                    try:
+                        # Obtain our filename for this file
+                        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
+                        target_filename = analysis_result.compilation.filename_lookup(target_filename_str)
 
-                    # Obtain the offset for this line + character position
-                    target_offset = analysis_result.compilation.get_global_offset_from_line_and_character(
-                        target_filename,
-                        params.position.line + 1,
-                        params.position.character + 1
-                    )
+                        # Obtain the offset for this line + character position
+                        target_offset = analysis_result.compilation.get_global_offset_from_line_and_character(
+                            target_filename,
+                            params.position.line + 1,
+                            params.position.character + 1
+                        )
 
-                    # Obtain sources
-                    sources: Set[Source] = analysis_result.analysis.offset_to_definitions(
-                        target_filename_str,
-                        target_offset
-                    )
+                        # Obtain sources
+                        sources: Set[Source] = analysis_result.analysis.offset_to_definitions(
+                            target_filename_str,
+                            target_offset
+                        )
+                    except Exception:
+                        continue
 
                     # Add all definitions from this source.
                     for source in sources:
@@ -103,22 +108,27 @@ class SlitherLSPHooks(ServerHooks):
         with self.app.workspace.analyses_lock:
             for analysis_result in self.app.workspace.analyses:
                 if analysis_result.analysis is not None:
-                    # Obtain our filename for this file
-                    target_filename_str: str = uri_to_fs_path(params.text_document.uri)
-                    target_filename = analysis_result.compilation.filename_lookup(target_filename_str)
+                    # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
+                    #  these functions.
+                    try:
+                        # Obtain our filename for this file
+                        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
+                        target_filename = analysis_result.compilation.filename_lookup(target_filename_str)
 
-                    # Obtain the offset for this line + character position
-                    target_offset = analysis_result.compilation.get_global_offset_from_line_and_character(
-                        target_filename,
-                        params.position.line + 1,
-                        params.position.character + 1
-                    )
+                        # Obtain the offset for this line + character position
+                        target_offset = analysis_result.compilation.get_global_offset_from_line_and_character(
+                            target_filename,
+                            params.position.line + 1,
+                            params.position.character + 1
+                        )
 
-                    # Obtain sources
-                    sources: Set[Source] = analysis_result.analysis.offset_to_references(
-                        target_filename_str,
-                        target_offset
-                    )
+                        # Obtain sources
+                        sources: Set[Source] = analysis_result.analysis.offset_to_references(
+                            target_filename_str,
+                            target_offset
+                        )
+                    except Exception:
+                        continue
 
                     # Add all references from this source.
                     for source in sources:

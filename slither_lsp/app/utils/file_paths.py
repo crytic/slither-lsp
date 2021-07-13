@@ -30,17 +30,17 @@ def get_solidity_files(folders: Iterable[str], recursive=True) -> Set[str]:
     # Create our resulting set
     solidity_files = set()
     for folder in folders:
-        for root, dirs, files in os.walk(folder):
-            # Loop through all files and determine if any have a .sol extension
-            for file in files:
-                if is_solidity_file(file):
-                    solidity_files.add(os.path.join(root, file))
-
-            # If recursive, join our set with any other discovered files in subdirectories.
-            if recursive:
-                solidity_files.update(
-                    get_solidity_files([os.path.join(root, d) for d in dirs], recursive)
-                )
+        for item in os.listdir(folder):
+            full_path = os.path.join(folder, item)
+            if os.path.isfile(full_path):
+                if is_solidity_file(full_path):
+                    solidity_files.add(full_path)
+            elif recursive and os.path.isdir(full_path):
+                # If recursive, join our set with any other discovered files in subdirectories.
+                if item != 'node_modules':
+                    solidity_files.update(
+                        get_solidity_files([full_path], recursive)
+                    )
 
     # Return all discovered solidity files
     return solidity_files

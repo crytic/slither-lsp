@@ -83,7 +83,7 @@ class InitializeParams(WorkDoneProgressParams):
     # It can be `null` if the client supports workspace folders but none are
     # configured.
     # @since 3.6.0
-    workspace_folders: List[WorkspaceFolder] = field(default_factory=list)
+    workspace_folders: Optional[List[WorkspaceFolder]] = field(default_factory=list)
 
 
 @dataclass

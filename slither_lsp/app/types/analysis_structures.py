@@ -52,9 +52,6 @@ class CompilationTarget(SerializableStructure):
     # Defines an optional workspace folder name to use as the working directory.
     cwd_workspace: Optional[str] = None
 
-    # Defines an optional working directory folder to use, relative to the workspace directory.
-    cwd_folder: Optional[str] = None
-
     # Additional arguments to provide to crytic-compile.
     crytic_compile_args: Optional[Dict[str, Union[str, bool]]] = None
 

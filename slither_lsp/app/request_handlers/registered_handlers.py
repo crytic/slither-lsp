@@ -8,3 +8,4 @@ from slither_lsp.app.request_handlers.compilation.set_compilation_targets import
 # slither
 from slither_lsp.app.request_handlers.analysis.get_version import GetVersion
 from slither_lsp.app.request_handlers.analysis.get_detector_list import GetDetectorListHandler
+from slither_lsp.app.request_handlers.analysis.set_detector_settings import SetDetectorSettingsHandler

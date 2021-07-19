@@ -11,11 +11,13 @@ from urllib.request import url2pathname, pathname2url
 from crytic_compile import CryticCompile
 from crytic_compile.platform.solc_standard_json import SolcStandardJson
 from slither import Slither
+from slither.__main__ import get_detectors_and_printers, _process as process_detectors_and_printers
+from slither_lsp.app.feature_analyses.slither_diagnostics import SlitherDiagnostics
 from slither_lsp.app.requests.analysis.report_analysis_progress import ReportAnalysisProgressNotification
 
 from slither_lsp.app.types.params import SetCompilationTargetsParams, AnalysisProgressParams, AnalysisResultProgress
 from slither_lsp.app.types.analysis_structures import CompilationTarget, CompilationTargetStandardJson, \
-    CompilationTargetType, AnalysisResult
+    CompilationTargetType, AnalysisResult, SlitherDetectorResult, SlitherDetectorSettings
 from slither_lsp.app.utils.file_paths import is_solidity_file, get_solidity_files, fs_path_to_uri, uri_to_fs_path
 from slither_lsp.lsp.request_handlers.workspace.did_change_watched_files import DidChangeWatchedFilesHandler
 from slither_lsp.lsp.requests.client.register_capability import RegisterCapabilityRequest
@@ -81,6 +83,10 @@ class SolidityWorkspace:
         self.analyses: List[AnalysisResult] = []
         self.analyses_lock = Lock()
 
+        # Define our slither diagnostics provider
+        self.detector_settings: SlitherDetectorSettings = SlitherDetectorSettings(enabled=True, hidden_checks=[])
+        self.slither_diagnostics: Optional[SlitherDiagnostics] = None
+
         # Register our event handlers. Some are registered synchronously so as not to waste resources spinning up
         # a thread. This is fine so long as we do not hang up the thread for long. Any potentially longer running
         # event handlers should be run asynchronously.
@@ -126,6 +132,11 @@ class SolidityWorkspace:
             self._on_set_compilation_targets,
             asynchronous=True
         )
+        self.app.server.event_emitter.on(
+            'slither.setDetectorSettings',
+            self._on_set_detector_settings,
+            asynchronous=True
+        )
 
     @property
     def workspace_opened(self):
@@ -142,6 +153,9 @@ class SolidityWorkspace:
         shutdown() is called, or when the language server receives a shutdown request.
         :return: None
         """
+        # Create an object to track slither detector results in diagnostics
+        self.slither_diagnostics = SlitherDiagnostics(self.app.server.context)
+
         # Register for our file watching operations on Solidity files.
         RegisterCapabilityRequest.send(
             context=self.app.server.context,
@@ -283,6 +297,22 @@ class SolidityWorkspace:
         if updated_solidity_files:
             self._queue_reanalysis()
 
+    def _on_set_detector_settings(self, params: SlitherDetectorSettings) -> None:
+        """
+        Sets the detector settings for the workspace, indicating how detector output should be presented.
+        :param params: The parameters provided for the set detector settings request.
+        :return: None
+        """
+        # If our detector settings are not different than existing ones, we do not need to trigger any on-change events.
+        if params == self.detector_settings:
+            return
+
+        # Set our detector settings
+        self.detector_settings = params
+
+        # Refresh our detector output
+        self._refresh_detector_output()
+
     def _on_set_compilation_targets(self, params: SetCompilationTargetsParams) -> None:
         """
         Sets the compilation targets for the workspace to use. If empty, auto-compilation will be used instead.
@@ -339,7 +369,20 @@ class SolidityWorkspace:
             params=report_progress_params
         )
 
+    def _refresh_detector_output(self):
+        """
+        Refreshes language server state given new analyses output or detector settings.
+        :return: None
+        """
+        # Update our diagnostics with new detector output.
+        self.slither_diagnostics.update(self.analyses, self.detector_settings)
+
     def refresh_workspace(self) -> None:
+        """
+        Refreshes the currently opened workspace state, tracking new files if a workspace change occurred, re-running
+        compilation and analysis if needed, and refreshing analysis output such as for slither detectors.
+        :return:
+        """
         # First refresh our initial solidity target list for this workspace
         with self.solidity_files_lock:
             # If we're meant to re-scan our solidity files, do so to get an initial collection of solidity target
@@ -374,8 +417,11 @@ class SolidityWorkspace:
                         self.analyses = []
                         self._report_compilation_progress()
                         for compilation_target in self.compilation_targets:
+                            analyzed_successfully = True
                             compilation: Optional[CryticCompile] = None
                             analysis = None
+                            analysis_error = None
+                            detector_results = None
                             try:
                                 # Compile our target
                                 compilation = self._compile_target(compilation_target)
@@ -383,31 +429,43 @@ class SolidityWorkspace:
                                 # Create our analysis.
                                 analysis = Slither(compilation)
 
-                                # Append our result
-                                self.analyses.append(
-                                    AnalysisResult(
-                                        succeeded=True,
-                                        compilation_target=compilation_target,
-                                        compilation=compilation,
-                                        analysis=analysis,
-                                        error=None
-                                    )
-                                )
+                                # Run detectors and obtain results
+                                detector_classes, _ = get_detectors_and_printers()
+                                _, detector_results, _, _ = process_detectors_and_printers(analysis, detector_classes,
+                                                                                           [])
+                                # Parse detector results
+                                if detector_results is not None and isinstance(detector_results, list):
+                                    detector_results = [
+                                        SlitherDetectorResult.from_dict(detector_result)
+                                        for detector_result in detector_results
+                                    ]
+                                else:
+                                    detector_results = None
 
                             except Exception as err:
-                                # TODO: Add error logging message here.
-                                self.analyses.append(
-                                    AnalysisResult(
-                                        succeeded=False,
-                                        compilation_target=compilation_target,
-                                        compilation=compilation,
-                                        analysis=analysis,
-                                        error=err
-                                    )
-                                )
+                                # If we encounter an error, set our status.
+                                analyzed_successfully = False
+                                analysis_error = err
 
+                            # Add our analysis
+                            self.analyses.append(
+                                AnalysisResult(
+                                    succeeded=analyzed_successfully,
+                                    compilation_target=compilation_target,
+                                    compilation=compilation,
+                                    analysis=analysis,
+                                    error=analysis_error,
+                                    detector_results=detector_results
+                                )
+                            )
+
+                            # Report analysis status to our client
                             self._report_compilation_progress()
 
+                        # Refresh our detector results
+                        self._refresh_detector_output()
+
+                        # Clear the dirty status which triggers analysis in later polling rounds.
                         self._analysis_last_change_time = None
 
     def generate_compilation_targets(self) -> List[CompilationTarget]:

@@ -21,7 +21,13 @@ class SlitherDiagnostics:
 
         # TODO: Detector filters
 
-    def update(self, analysis_results: List[AnalysisResult], detector_settings: SlitherDetectorSettings):
+    def update(self, analysis_results: List[AnalysisResult], detector_settings: SlitherDetectorSettings) -> None:
+        """
+        Generates and tracks the diagnostics for provided analysis results and detector settings.
+        :param analysis_results: Analysis results containing detector results which diagnostics will be generated from.
+        :param detector_settings: User-provided settings for slither detector results.
+        :return: None
+        """
         # Create a new diagnostics array which our current array will be swapped to later.
         new_diagnostics: Dict[str, PublishDiagnosticsParams] = {}
 
@@ -35,10 +41,7 @@ class SlitherDiagnostics:
                 if analysis_result.detector_results is None:
                     continue
 
-                # Populate each detector result.
-                sorted_detector_results = sorted(analysis_result.detector_results, key=lambda x: (x.impact, x.check))
-
-                for detector_result in sorted_detector_results:
+                for detector_result in analysis_result.detector_results:
                     # If we don't have any source mappings, skip this.
                     if len(detector_result.elements) == 0 or detector_result.elements[0].source_mapping is None:
                         continue
@@ -90,6 +93,13 @@ class SlitherDiagnostics:
             PublishDiagnosticsNotification.send(self.context, diagnostic_params)
 
     def _clear_single(self, file_uri: str, clear_from_lookup: bool = False) -> None:
+        """
+        Clears a single file's diagnostics, and optionally removes it from the lookup maintained by this object.
+        :param file_uri: The uri of the file to clear diagnostics for.
+        :param clear_from_lookup: Indicates whether the lookup tracking file diagnostics should be purged of this
+        diagnostic.
+        :return: None
+        """
         # Send empty diagnostics for this file to the client.
         PublishDiagnosticsNotification.send(
             self.context,
@@ -105,6 +115,10 @@ class SlitherDiagnostics:
             self.diagnostics.pop(file_uri, None)
 
     def clear(self) -> None:
+        """
+        Clears all previously published diagnostics by this object.
+        :return: None
+        """
         # Loop through all diagnostic files, publish new diagnostics for each file with no items.
         for file_uri in self.diagnostics.keys():
             self._clear_single(file_uri, False)

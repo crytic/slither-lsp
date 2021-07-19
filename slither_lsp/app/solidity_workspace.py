@@ -18,7 +18,8 @@ from slither_lsp.app.requests.analysis.report_analysis_progress import ReportAna
 from slither_lsp.app.types.params import SetCompilationTargetsParams, AnalysisProgressParams, AnalysisResultProgress
 from slither_lsp.app.types.analysis_structures import CompilationTarget, CompilationTargetStandardJson, \
     CompilationTargetType, AnalysisResult, SlitherDetectorResult, SlitherDetectorSettings
-from slither_lsp.app.utils.file_paths import is_solidity_file, get_solidity_files, fs_path_to_uri, uri_to_fs_path
+from slither_lsp.app.utils.file_paths import is_solidity_file, get_solidity_files, fs_path_to_uri, uri_to_fs_path, \
+    normalize_uri
 from slither_lsp.lsp.request_handlers.workspace.did_change_watched_files import DidChangeWatchedFilesHandler
 from slither_lsp.lsp.requests.client.register_capability import RegisterCapabilityRequest
 from slither_lsp.lsp.types.basic_structures import WorkspaceFolder, TextDocumentItem
@@ -234,9 +235,9 @@ class SolidityWorkspace:
         # Apply changes to workspace folders.
         with self.solidity_files_lock:
             for added in params.event.added:
-                self.workspace_folders[added.uri] = added
+                self.workspace_folders[normalize_uri(added.uri)] = added
             for removed in params.event.removed:
-                self.workspace_folders.pop(removed.uri, None)
+                self.workspace_folders.pop(normalize_uri(removed.uri), None)
 
             # Trigger a re-scan of the workspace Solidity files and re-analyze the codebase.
             self._queue_reanalysis(files_rescan=True, force_analysis=True)
@@ -248,7 +249,7 @@ class SolidityWorkspace:
         :return: None
         """
         # Update our open text document lookup.
-        self.open_text_documents[params.text_document.uri] = params.text_document
+        self.open_text_documents[normalize_uri(params.text_document.uri)] = params.text_document
 
         # If we have no workspace folders open, update our solidity files list and re-analyze immediately.
         if not self.workspace_opened:
@@ -261,7 +262,7 @@ class SolidityWorkspace:
         :return: None
         """
         # Update our open text document lookup.
-        self.open_text_documents.pop(params.text_document.uri, None)
+        self.open_text_documents.pop(normalize_uri(params.text_document.uri), None)
 
         # If we have no workspace folders open, update our solidity files list and re-analyze immediately.
         if not self.workspace_opened:
@@ -287,11 +288,12 @@ class SolidityWorkspace:
         updated_solidity_files = False
         with self.solidity_files_lock:
             for file_event in params.changes:
+                target_uri = normalize_uri(file_event.uri)
                 if file_event.type == FileChangeType.CREATED or file_event.type == FileChangeType.CHANGED:
-                    self.solidity_file_uris.add(file_event.uri)
+                    self.solidity_file_uris.add(target_uri)
                 elif file_event.type == FileChangeType.DELETED:
-                    self.solidity_file_uris.remove(file_event.uri)
-                updated_solidity_files = updated_solidity_files or is_solidity_file(file_event.uri)
+                    self.solidity_file_uris.remove(target_uri)
+                updated_solidity_files = updated_solidity_files or is_solidity_file(target_uri)
 
         # Set our analysis pending status to signal for reanalysis.
         if updated_solidity_files:

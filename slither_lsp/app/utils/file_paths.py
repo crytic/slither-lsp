@@ -14,6 +14,10 @@ def uri_to_fs_path(uri: str) -> str:
     return path
 
 
+def normalize_uri(uri: str) -> str:
+    return fs_path_to_uri(uri_to_fs_path(uri))
+
+
 def fs_path_to_uri(path: str) -> str:
     uri = urljoin('file:', pathname2url(path))
     return uri

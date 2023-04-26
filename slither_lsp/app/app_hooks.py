@@ -104,8 +104,38 @@ class SlitherLSPHooks(ServerHooks):
 
     def goto_implementation(self, context: ServerContext, params: ImplementationParams) \
             -> Union[Location, List[Location], List[LocationLink], None]:
-        # TODO:
-        return None
+        # Compile a list of implementations
+        implementations = []
+
+        # Loop through all compilations
+        with self.app.workspace.analyses_lock:
+            for analysis_result in self.app.workspace.analyses:
+                if analysis_result.analysis is not None:
+                    try:
+                        # Obtain our filename for this file
+                        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
+                        target_filename = analysis_result.compilation.filename_lookup(target_filename_str)
+
+                        # Obtain the offset for this line + character position
+                        target_offset = analysis_result.compilation.get_global_offset_from_line(
+                            target_filename_str,
+                            params.position.line + 1
+                        )
+                        # Obtain sources
+                        sources = analysis_result.analysis.offset_to_implementations(
+                            target_filename_str,
+                            target_offset + params.position.character
+                        )
+                    except Exception:
+                        continue
+                    else:
+                        # Add all implementations from this source.
+                        for source in sources:
+                            source_location: Optional[Location] = self._source_to_location(source)
+                            if source_location is not None:
+                                implementations.append(source_location)
+
+        return implementations
 
     def find_references(self, context: ServerContext, params: ImplementationParams) \
             -> Optional[List[Location]]:

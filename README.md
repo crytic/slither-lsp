@@ -5,8 +5,8 @@
 - Create a new python virtual environment
 
 ```bash
-python -m venv /path/to/new/virtual/env/slither-lsp
-source /path/to/new/virtual/env/slither-lsp/bin/activate
+python3 -m venv /path/to/new/virtual/env/slither-lsp-env
+source /path/to/new/virtual/env/slither-lsp-env/bin/activate
 ```
 
 - Clone and install slither-lsp locally
@@ -16,6 +16,7 @@ git clone git@github.com:crytic/slither-lsp.git
 cd slither-lsp
 git checkout dev
 pip3 install -e .
+cd ..
 ```
 
 - Clone and install slither-vscode locally

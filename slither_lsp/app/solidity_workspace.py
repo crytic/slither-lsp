@@ -47,7 +47,7 @@ class SolidityWorkspace:
     Provides a set of methods for tracking and managing Solidity files in a workspace.
     """
     _FILE_CHANGE_POLLING_INTERVAL_SECONDS = 0.2
-    _FILE_CHANGE_ANALYSIS_DELAY_SECONDS = 2.0
+    _FILE_CHANGE_ANALYSIS_DELAY_SECONDS = 60.0
 
     def __init__(self, app):
         # Late import to avoid circular reference issues

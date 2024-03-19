@@ -1,164 +1,189 @@
-from dataclasses import dataclass, field
 from enum import Enum
-from typing import Optional, Union, Any, List, Dict
+from typing import Any, Dict, List, Optional, Union
 
+import attrs
 from crytic_compile import CryticCompile
 from slither import Slither
-from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure, serialization_metadata
 
 
 class CompilationTargetType(Enum):
     """
     Represents the type of target for compilation.
     """
-    BASIC = 'basic'
-    STANDARD_JSON = 'standard_json'
+
+    BASIC = "basic"
+    STANDARD_JSON = "standard_json"
 
 
-@dataclass
-class CompilationTargetBasic(SerializableStructure):
+@attrs.define
+class CompilationTargetBasic:
     """
     Data structure which represents options to compile against a basic string path target for crytic-compile.
     """
-    # The target destination for a crytic-compile target.
-    target: str
+
+    target: str = attrs.field()
+    """ The target destination for a crytic-compile target. """
 
 
-@dataclass
-class CompilationTargetStandardJson(SerializableStructure):
+@attrs.define
+class CompilationTargetStandardJson:
     """
     Data structure which represents options to compile against solc standard json via crytic-compile.
     References:
         https://docs.soliditylang.org/en/latest/using-the-compiler.html#compiler-input-and-output-json-description
     """
-    # The target destination for a crytic-compile target.
-    target: Any
+
+    target: Any = attrs.field()
+    """ The target destination for a crytic-compile target. """
 
 
-@dataclass
-class CompilationTarget(SerializableStructure):
+@attrs.define
+class CompilationTarget:
     """
     Data structure which represents options to compile solidity files.
     """
-    # Defines the type of target for compilation settings.
-    target_type: CompilationTargetType
 
-    # Defines compilation settings for a BASIC target type.
-    target_basic: Optional[CompilationTargetBasic] = None
+    target_type: CompilationTargetType = attrs.field()
+    """ Defines the type of target for compilation settings. """
 
-    # Defines compilation settings for a STANDARD_JSON target type.
-    target_standard_json: Optional[CompilationTargetStandardJson] = None
+    target_basic: Optional[CompilationTargetBasic] = attrs.field(default=None)
+    """ Defines compilation settings for a BASIC target type. """
 
-    # Defines an optional workspace folder name to use as the working directory.
-    cwd_workspace: Optional[str] = None
+    target_standard_json: Optional[CompilationTargetStandardJson] = attrs.field(
+        default=None
+    )
+    """ Defines compilation settings for a STANDARD_JSON target type. """
 
-    # Additional arguments to provide to crytic-compile.
-    crytic_compile_args: Optional[Dict[str, Union[str, bool]]] = None
+    cwd_workspace: Optional[str] = attrs.field(default=None)
+    """ Defines an optional workspace folder name to use as the working directory. """
+
+    crytic_compile_args: Optional[Dict[str, Union[str, bool]]] = attrs.field(
+        default=None
+    )
+    """ Additional arguments to provide to crytic-compile. """
 
 
-@dataclass
-class SlitherDetectorSettings(SerializableStructure):
+@attrs.define
+class SlitherDetectorSettings:
     """
     Data structure which represents options to show slither detector output.
     """
-    # Defines whether detector output should be enabled at all
-    enabled: bool = True
 
-    # Defines a list of detector check identifiers which represent detector output we wish to suppress.
-    hidden_checks: List[str] = field(default_factory=list)
+    enabled: bool = attrs.field(default=True)
+    """ Defines whether detector output should be enabled at all """
 
-
-@dataclass
-class SlitherDetectorResultElementSourceMapping(SerializableStructure):
-    # The source starting offset for this element
-    start: int
-
-    # The source ending offset for this element
-    length: int
-
-    # An absolute path to the filename.
-    filename_absolute: str = field(metadata=serialization_metadata(name_override='filename_absolute'))
-
-    # A relative path to the filename from the working directory slither was executed from.
-    filename_relative: str = field(metadata=serialization_metadata(name_override='filename_relative'))
-
-    # A short filepath used for display purposes.
-    filename_short: str = field(metadata=serialization_metadata(name_override='filename_short'))
-
-    # The filename used by slither
-    filename_used: str = field(metadata=serialization_metadata(name_override='filename_used'))
-
-    # A list of line numbers associated with the finding.
-    lines: List[int]
-
-    # The starting column of the finding, starting from the first line.
-    starting_column: int = field(metadata=serialization_metadata(name_override='starting_column'))
-
-    # The ending column of the finding, ending on the last line.
-    ending_column: int = field(metadata=serialization_metadata(name_override='ending_column'))
+    hidden_checks: List[str] = attrs.field(default=[])
+    """ Defines a list of detector check identifiers which represent detector output we wish to suppress. """
 
 
-@dataclass
-class SlitherDetectorResultElement(SerializableStructure):
-    # The name of the source mapped item associated with a slither detector result
-    name: str
+@attrs.define
+class SlitherDetectorResultElementSourceMapping:
+    start: int = attrs.field()
+    """ The source starting offset for this element """
 
-    # The source mapping associated with the element associated with the detector result.
-    source_mapping: Optional[SlitherDetectorResultElementSourceMapping] = field(metadata=serialization_metadata(name_override='source_mapping'))
+    length: int = attrs.field()
+    """ The source ending offset for this element """
 
-    # The type of item this represents (contract, function, etc.)
-    type: str
+    filename_absolute: str = attrs.field()
+    """ An absolute path to the filename. """
 
-    # The fields related to this element type.
-    type_specific_fields: Any = field(metadata=serialization_metadata(name_override='type_specific_fields'))
+    filename_relative: str = attrs.field()
+    """ A relative path to the filename from the working directory slither was executed from. """
 
-    # Any additional detector-specific field.
-    additional_fields: Any = field(metadata=serialization_metadata(name_override='additional_fields'))
+    filename_short: str = attrs.field()
+    """ A short filepath used for display purposes. """
+
+    lines: List[int] = attrs.field()
+    """ A list of line numbers associated with the finding. """
+
+    starting_column: int = attrs.field()
+    """ The starting column of the finding, starting from the first line. """
+
+    ending_column: int = attrs.field()
+    """ The ending column of the finding, ending on the last line. """
+
+    is_dependency: bool = attrs.field()
 
 
-@dataclass
-class SlitherDetectorResult(SerializableStructure):
+@attrs.define
+class SlitherDetectorResultElement:
+    name: str = attrs.field()
+    """ The name of the source mapped item associated with a slither detector result """
+
+    source_mapping: Optional[SlitherDetectorResultElementSourceMapping] = attrs.field()
+    """ The source mapping associated with the element associated with the detector result. """
+
+    type: str = attrs.field()
+    """ The type of item this represents (contract, function, etc.) """
+
+    @staticmethod
+    def from_dict(dict):
+        return SlitherDetectorResultElement(
+            name=dict["name"],
+            source_mapping=(
+                SlitherDetectorResultElementSourceMapping(**dict["source_mapping"])
+                if dict["source_mapping"]
+                else None
+            ),
+            type=dict["type"],
+        )
+
+
+@attrs.define
+class SlitherDetectorResult:
     """
     Data structure which represents slither detector results.
     """
-    # The detector check identifier.
-    check: str
 
-    # The level of confidence in the detector result.
-    confidence: str
+    check: str = attrs.field()
+    """ The detector check identifier. """
 
-    # The severity of the detector result if it is a true-positive.
-    impact: str
+    confidence: str = attrs.field()
+    """ The level of confidence in the detector result. """
 
-    # A description of a detector result.
-    description: str
+    impact: str = attrs.field()
+    """ The severity of the detector result if it is a true-positive. """
 
-    # Source mapped elements that are relevant to this detector result.
-    elements: List[SlitherDetectorResultElement]
+    description: str = attrs.field()
+    """ A description of a detector result. """
 
-    # Any additional detector-specific field.
-    additional_fields: Any = field(metadata=serialization_metadata(name_override='additional_fields'))
+    elements: List[SlitherDetectorResultElement] = attrs.field()
+    """ Source mapped elements that are relevant to this detector result. """
+
+    @staticmethod
+    def from_dict(dict):
+        return SlitherDetectorResult(
+            check=dict["check"],
+            confidence=dict["confidence"],
+            impact=dict["impact"],
+            description=dict["description"],
+            elements=[
+                SlitherDetectorResultElement.from_dict(elem)
+                for elem in dict["elements"]
+            ],
+        )
 
 
-@dataclass
+@attrs.define
 class AnalysisResult:
     """
     Data structure which represents compilation and analysis results for internal use.
     """
-    # Defines if our analysis succeeded
-    succeeded: bool
 
-    # Our compilation target settings
-    compilation_target: CompilationTarget
+    succeeded: bool = attrs.field()
+    """ Defines if our analysis succeeded """
 
-    # Our compilation result
-    compilation: Optional[CryticCompile]
+    compilation_target: CompilationTarget = attrs.field()
+    """ Our compilation target settings """
 
-    # Our analysis result
-    analysis: Optional[Slither]
+    compilation: Optional[CryticCompile] = attrs.field()
+    """ Our compilation result """
 
-    # An exception if the analysis did not succeed
-    error: Optional[Exception]
+    analysis: Optional[Slither] = attrs.field()
+    """ Our analysis result """
 
-    # Detector output
-    detector_results: Optional[List[SlitherDetectorResult]] = None
+    error: Optional[Exception] = attrs.field()
+    """ An exception if the analysis did not succeed """
+
+    detector_results: Optional[List[SlitherDetectorResult]] = attrs.field(default=None)
+    """ Detector output """

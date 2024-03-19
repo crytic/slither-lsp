@@ -1,14 +1,14 @@
 import argparse
-
 import logging
 
-from slither_lsp.app.app import SlitherLSPApp
-
-logging.basicConfig()
-logging.getLogger("slither_lsp").setLevel(logging.INFO)
+from slither_lsp.app.app import create_server
 
 
-def parse_args() -> argparse.Namespace:
+def _parse_loglevel(value: str) -> int:
+    return getattr(logging, value.upper())
+
+
+def _parse_args() -> argparse.Namespace:
     """
     Parse the underlying arguments for the program.
     :return: Returns the arguments for the program.
@@ -16,15 +16,41 @@ def parse_args() -> argparse.Namespace:
     # Initialize our argument parser
     parser = argparse.ArgumentParser(
         description="slither-lsp",
-        usage="slither-lsp [options]",
+    )
+    parser.add_argument("--loglevel", type=_parse_loglevel, default="WARNING")
+    subcommands = parser.add_subparsers(dest="mode")
+    tcp = subcommands.add_parser(
+        "tcp", help="Starts a TCP server instead of communicating over STDIO"
+    )
+    ws = subcommands.add_parser(
+        "websocket",
+        help="Starts a WebSocket server instead of communicating over STDIO",
     )
 
-    # We want to offer a switch to communicate over a network socket rather than stdin/stdout.
-    parser.add_argument(
+    tcp.add_argument(
         "--port",
-        help="Indicates that the RPC server should use a TCP socket with the provided port, rather "
-             "than stdio.",
-        type=int
+        help="The port the TCP server should be listening.",
+        type=int,
+        default=12345,
+    )
+    tcp.add_argument(
+        "--host",
+        help="The host the TCP server should be listening on.",
+        type=str,
+        default="127.0.0.1",
+    )
+
+    ws.add_argument(
+        "--port",
+        help="The port the WebSocket server should be listening.",
+        type=int,
+        default=12345,
+    )
+    ws.add_argument(
+        "--host",
+        help="The host the WebSocket server should be listening on.",
+        type=str,
+        default="127.0.0.1",
     )
 
     # TODO: Perform validation for port number
@@ -38,11 +64,19 @@ def main() -> None:
     :return: None
     """
     # Parse all arguments
-    args = parse_args()
+    args = _parse_args()
+    logger = logging.getLogger("slither_lsp")
+    logger.setLevel(args.loglevel)
+
+    app = create_server(logger)
 
     # Run our main app
-    app = SlitherLSPApp(port=args.port)
-    app.start()
+    if args.mode == "tcp":
+        app.start_tcp(args.host, args.port)
+    elif args.mode == "ws":
+        app.start_ws(args.host, args.port)
+    else:
+        app.start_io()
 
 
 if __name__ == "__main__":

@@ -1,21 +1,16 @@
+from importlib.metadata import version as pkg_version
 from typing import Any
 
-from pkg_resources import require
-
-from slither_lsp.lsp.request_handlers.base_handler import BaseRequestHandler
-from slither_lsp.lsp.state.server_context import ServerContext
+from pygls.server import LanguageServer
 
 
-class GetVersion(BaseRequestHandler):
+def get_version(ls: LanguageServer, params: Any) -> Any:
     """
     Handler which retrieves versions for slither, crytic-compile, and related applications.
     """
-    method_name = "$/slither/getVersion"
 
-    @classmethod
-    def process(cls, context: ServerContext, params: Any) -> Any:
-        return {
-            "slither": require("slither-analyzer")[0].version,
-            "crytic_compile": require("crytic-compile")[0].version,
-            "slither_lsp": require("slither-lsp")[0].version
-        }
+    return {
+        "slither": pkg_version("slither-analyzer"),
+        "crytic_compile": pkg_version("crytic-compile"),
+        "slither_lsp": pkg_version("slither-lsp"),
+    }

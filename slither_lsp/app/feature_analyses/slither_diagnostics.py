@@ -1,27 +1,37 @@
-from typing import Dict, List, Set
+from __future__ import annotations
 
-from slither_lsp.app.types.analysis_structures import AnalysisResult, SlitherDetectorResult, SlitherDetectorSettings
+from typing import TYPE_CHECKING, Dict, List, Set
+
+import lsprotocol.types as lsp
+from slither_lsp.app.types.analysis_structures import (
+    AnalysisResult,
+    SlitherDetectorSettings,
+)
 from slither_lsp.app.utils.file_paths import fs_path_to_uri
-from slither_lsp.lsp.requests.text_document.publish_diagnostics import PublishDiagnosticsNotification
-from slither_lsp.lsp.state.server_context import ServerContext
-from slither_lsp.lsp.types.basic_structures import Diagnostic, Range, Position, DiagnosticSeverity
-from slither_lsp.lsp.types.params import PublishDiagnosticsParams
+
+if TYPE_CHECKING:
+    from slither_lsp.app.slither_server import SlitherServer
 
 
 class SlitherDiagnostics:
     """
     Tracks and reports diagnostics that were derived from AnalysisResults
     """
-    def __init__(self, context: ServerContext):
+
+    def __init__(self, context: SlitherServer):
         # Set basic parameters
         self.context = context
 
         # Define a lookup of file uri -> diagnostics. This is necessary so we can track non-existent diagnostics.
-        self.diagnostics: Dict[str, PublishDiagnosticsParams] = {}
+        self.diagnostics: Dict[str, lsp.PublishDiagnosticsParams] = {}
 
         # TODO: Detector filters
 
-    def update(self, analysis_results: List[AnalysisResult], detector_settings: SlitherDetectorSettings) -> None:
+    def update(
+        self,
+        analysis_results: List[AnalysisResult],
+        detector_settings: SlitherDetectorSettings,
+    ) -> None:
         """
         Generates and tracks the diagnostics for provided analysis results and detector settings.
         :param analysis_results: Analysis results containing detector results which diagnostics will be generated from.
@@ -29,7 +39,7 @@ class SlitherDiagnostics:
         :return: None
         """
         # Create a new diagnostics array which our current array will be swapped to later.
-        new_diagnostics: Dict[str, PublishDiagnosticsParams] = {}
+        new_diagnostics: Dict[str, lsp.PublishDiagnosticsParams] = {}
 
         # Convert our hidden checks to a set
         hidden_checks = set(detector_settings.hidden_checks)
@@ -43,7 +53,10 @@ class SlitherDiagnostics:
 
                 for detector_result in analysis_result.detector_results:
                     # If we don't have any source mappings, skip this.
-                    if len(detector_result.elements) == 0 or detector_result.elements[0].source_mapping is None:
+                    if (
+                        len(detector_result.elements) == 0
+                        or detector_result.elements[0].source_mapping is None
+                    ):
                         continue
 
                     # If our result is for a check we're skipping, do so.
@@ -52,31 +65,39 @@ class SlitherDiagnostics:
 
                     # Obtain the target filename for this finding (the first element is the most significant)
                     target_result_element = detector_result.elements[0]
-                    target_uri = fs_path_to_uri(target_result_element.source_mapping.filename_absolute)
+                    target_uri = fs_path_to_uri(
+                        target_result_element.source_mapping.filename_absolute
+                    )
 
                     # Obtain our params for this file uri, or create them if they haven't been yet.
                     params = new_diagnostics.get(target_uri, None)
                     if params is None:
-                        params = PublishDiagnosticsParams(uri=target_uri, version=None, diagnostics=[])
+                        params = lsp.PublishDiagnosticsParams(
+                            uri=target_uri, version=None, diagnostics=[]
+                        )
                         new_diagnostics[target_uri] = params
 
                     # Add our detector result as a diagnostic.
                     params.diagnostics.append(
-                        Diagnostic(
-                            Range(
-                                start=Position(
-                                    line=target_result_element.source_mapping.lines[0] - 1,
-                                    character=target_result_element.source_mapping.starting_column - 1
+                        lsp.Diagnostic(
+                            lsp.Range(
+                                start=lsp.Position(
+                                    line=target_result_element.source_mapping.lines[0]
+                                    - 1,
+                                    character=target_result_element.source_mapping.starting_column
+                                    - 1,
                                 ),
-                                end=Position(
-                                    line=target_result_element.source_mapping.lines[-1] - 1,
-                                    character=target_result_element.source_mapping.ending_column - 1
-                                )
+                                end=lsp.Position(
+                                    line=target_result_element.source_mapping.lines[-1]
+                                    - 1,
+                                    character=target_result_element.source_mapping.ending_column
+                                    - 1,
+                                ),
                             ),
                             message=f"[{detector_result.impact.upper()}] {detector_result.description}",
-                            severity=DiagnosticSeverity.INFORMATION,
+                            severity=lsp.DiagnosticSeverity.Information,
                             code=detector_result.check,
-                            source='slither'
+                            source="slither",
                         )
                     )
 
@@ -90,7 +111,9 @@ class SlitherDiagnostics:
 
         # Loop for each diagnostic and broadcast all of them.
         for diagnostic_params in self.diagnostics.values():
-            PublishDiagnosticsNotification.send(self.context, diagnostic_params)
+            self.context.publish_diagnostics(
+                diagnostic_params.uri, diagnostics=diagnostic_params.diagnostics
+            )
 
     def _clear_single(self, file_uri: str, clear_from_lookup: bool = False) -> None:
         """
@@ -101,14 +124,7 @@ class SlitherDiagnostics:
         :return: None
         """
         # Send empty diagnostics for this file to the client.
-        PublishDiagnosticsNotification.send(
-            self.context,
-            PublishDiagnosticsParams(
-                uri=file_uri,
-                version=None,
-                diagnostics=[]
-            )
-        )
+        self.context.publish_diagnostics(file_uri, [])
 
         # Optionally clear this item from the diagnostic lookup
         if clear_from_lookup:

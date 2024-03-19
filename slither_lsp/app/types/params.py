@@ -1,38 +1,40 @@
-from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import List, Optional
 
+import attrs
 from slither_lsp.app.types.analysis_structures import CompilationTarget
-from slither_lsp.lsp.types.base_serializable_structure import SerializableStructure, serialization_metadata
 
 
-@dataclass
-class SetCompilationTargetsParams(SerializableStructure):
+@attrs.define
+class SetCompilationTargetsParams:
     """
     Data structure which represents parameters used to set compilation targets
     """
-    # Represents the list of compilation targets to compile and analyze. If empty, auto-compilation will be used.
-    targets: List[CompilationTarget]
+
+    targets: List[CompilationTarget] = attrs.field()
+    """ Represents the list of compilation targets to compile and analyze. If empty, auto-compilation will be used. """
 
 
-@dataclass
-class AnalysisResultProgress(SerializableStructure):
+@attrs.define
+class AnalysisResultProgress:
     """
     Data structure which represents an individual compilation and analysis result which is sent to a client.
     """
-    # Defines if our analysis succeeded. If None/null, indicates analysis is still pending.
-    succeeded: Optional[bool] = field(metadata=serialization_metadata(include_none=True))
 
-    # Our compilation target settings
-    compilation_target: CompilationTarget
+    succeeded: Optional[bool] = attrs.field()
+    """ Defines if our analysis succeeded. If None/null, indicates analysis is still pending. """
 
-    # An exception if the operation did not succeed
-    error: Optional[str]
+    compilation_target: CompilationTarget = attrs.field()
+    """ Our compilation target settings """
+
+    error: Optional[str] = attrs.field()
+    """ An exception if the operation did not succeed """
 
 
-@dataclass
-class AnalysisProgressParams(SerializableStructure):
+@attrs.define
+class AnalysisProgressParams:
     """
     Data structure which represents compilation and analysis results which are communicated to the client.
     """
-    # A list of analysis results, one for each compilation target.
-    results: List[AnalysisResultProgress]
+
+    results: List[AnalysisResultProgress] = attrs.field()
+    """ A list of analysis results, one for each compilation target. """

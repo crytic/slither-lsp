@@ -1,7 +1,10 @@
-from typing import List, Optional
+from typing import List, Optional, Union
 
 import attrs
-from slither_lsp.app.types.analysis_structures import CompilationTarget
+from slither_lsp.app.types.analysis_structures import (
+    CompilationTarget,
+    SlitherDetectorSettings,
+)
 
 
 @attrs.define
@@ -38,3 +41,61 @@ class AnalysisProgressParams:
 
     results: List[AnalysisResultProgress] = attrs.field()
     """ A list of analysis results, one for each compilation target. """
+
+
+SLITHER_GET_DETECTOR_LIST = "$/slither/getDetectorList"
+SLITHER_GET_VERSION = "$/slither/getVersion"
+SLITHER_SET_DETECTOR_SETTINGS = "$/slither/setDetectorSettings"
+CRYTIC_COMPILE_SOLC_STANDARD_JSON_AUTOGENERATE = (
+    "$/cryticCompile/solcStandardJson/autogenerate"
+)
+CRYTIC_COMPILE_GET_COMMAND_LINE_ARGUMENTS = "$/cryticCompile/getCommandLineArguments"
+ANALYSIS_REPORT_ANALYSIS_PROGRESS = "$/analysis/reportAnalysisProgress"
+COMPILATION_SET_COMPILATION_TARGETS = "$/compilation/setCompilationTargets"
+
+
+@attrs.define
+class SetDetectorSettingsRequest:
+    id: Union[int, str] = attrs.field()
+    params: SlitherDetectorSettings = attrs.field()
+    method: str = SLITHER_SET_DETECTOR_SETTINGS
+    jsonrpc: str = attrs.field(default="2.0")
+
+
+@attrs.define
+class SetCompilationTargetsRequest:
+    id: Union[int, str] = attrs.field()
+    params: SetCompilationTargetsParams = attrs.field()
+    method: str = COMPILATION_SET_COMPILATION_TARGETS
+    jsonrpc: str = attrs.field(default="2.0")
+
+
+@attrs.define
+class ReportAnalysisProgressNotification:
+    params: AnalysisProgressParams = attrs.field()
+    method: str = ANALYSIS_REPORT_ANALYSIS_PROGRESS
+    jsonrpc: str = attrs.field(default="2.0")
+
+
+METHOD_TO_TYPES = {
+    # Requests
+    SLITHER_SET_DETECTOR_SETTINGS: (
+        SetDetectorSettingsRequest,
+        None,
+        SlitherDetectorSettings,
+        None,
+    ),
+    COMPILATION_SET_COMPILATION_TARGETS: (
+        SetCompilationTargetsRequest,
+        None,
+        SetCompilationTargetsParams,
+        None,
+    ),
+    # Notification
+    ANALYSIS_REPORT_ANALYSIS_PROGRESS: (
+        ReportAnalysisProgressNotification,
+        None,
+        AnalysisProgressParams,
+        None,
+    ),
+}

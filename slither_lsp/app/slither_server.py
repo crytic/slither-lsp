@@ -1,12 +1,14 @@
 import logging
 import os
+from functools import lru_cache
 from threading import Lock
-from typing import Dict, List, Optional, Set
+from typing import Dict, List, Optional, Set, Type
 
 import lsprotocol.types as lsp
 from crytic_compile.crytic_compile import CryticCompile
 from crytic_compile.platform.solc_standard_json import SolcStandardJson
 from pygls.lsp import METHOD_TO_OPTIONS
+from pygls.protocol import LanguageServerProtocol
 from pygls.server import LanguageServer
 from slither import Slither
 from slither.__main__ import (
@@ -27,6 +29,10 @@ from slither_lsp.app.types.analysis_structures import (
     SlitherDetectorSettings,
 )
 from slither_lsp.app.types.params import (
+    ANALYSIS_REPORT_ANALYSIS_PROGRESS,
+    COMPILATION_SET_COMPILATION_TARGETS,
+    METHOD_TO_TYPES,
+    SLITHER_SET_DETECTOR_SETTINGS,
     AnalysisProgressParams,
     AnalysisResultProgress,
     SetCompilationTargetsParams,
@@ -43,6 +49,22 @@ from slither_lsp.app.utils.file_paths import (
 METHOD_TO_OPTIONS[lsp.WORKSPACE_DID_CHANGE_WATCHED_FILES] = (
     lsp.DidChangeWatchedFilesRegistrationOptions
 )
+
+
+class SlitherProtocol(LanguageServerProtocol):
+    # See https://github.com/openlawlibrary/pygls/discussions/441
+
+    @lru_cache
+    def get_message_type(self, method: str) -> Optional[Type]:
+        return METHOD_TO_TYPES.get(method, (None,))[0] or super().get_message_type(
+            method
+        )
+
+    @lru_cache
+    def get_result_type(self, method: str) -> Optional[Type]:
+        return METHOD_TO_TYPES.get(method, (None, None))[1] or super().get_result_type(
+            method
+        )
 
 
 class SlitherServer(LanguageServer):
@@ -79,7 +101,7 @@ class SlitherServer(LanguageServer):
     slither_diagnostics: Optional[SlitherDiagnostics] = None
 
     def __init__(self, logger: logging.Logger, *args):
-        super().__init__(*args)
+        super().__init__(protocol_cls=SlitherProtocol, *args)
 
         self._logger = logger
         self.slither_diagnostics = SlitherDiagnostics(self)
@@ -118,19 +140,13 @@ class SlitherServer(LanguageServer):
             ls._on_did_open_text_document(params)
 
         @self.thread()
-        @self.feature("$/slither/setDetectorSettings")
+        @self.feature(SLITHER_SET_DETECTOR_SETTINGS)
         def on_set_detector_settings(ls: SlitherServer, params):
-            # FIXME(frabert): This should not be necessary
-            #     see https://github.com/openlawlibrary/pygls/discussions/441
-            ls._on_set_detector_settings(
-                SlitherDetectorSettings(params.enabled, params.hiddenChecks)
-            )
+            ls._on_set_detector_settings(params)
 
         @self.thread()
-        @self.feature("$/compilation/setCompilationTargets")
-        def on_set_compilation_targets(
-            ls: SlitherServer, params: SetCompilationTargetsParams
-        ):
+        @self.feature(COMPILATION_SET_COMPILATION_TARGETS)
+        def on_set_compilation_targets(ls: SlitherServer, params):
             ls._on_set_compilation_targets(params)
 
         @self.thread()
@@ -333,7 +349,7 @@ class SlitherServer(LanguageServer):
             results=report_progress_params_results
         )
         self.send_notification(
-            "$/analysis/reportAnalysisProgress", report_progress_params
+            ANALYSIS_REPORT_ANALYSIS_PROGRESS, report_progress_params
         )
 
     def _refresh_detector_output(self):

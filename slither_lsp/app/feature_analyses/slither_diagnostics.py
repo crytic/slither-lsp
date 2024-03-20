@@ -124,7 +124,7 @@ class SlitherDiagnostics:
         :return: None
         """
         # Send empty diagnostics for this file to the client.
-        self.context.publish_diagnostics(file_uri, [])
+        self.context.publish_diagnostics(file_uri, diagnostics=[])
 
         # Optionally clear this item from the diagnostic lookup
         if clear_from_lookup:

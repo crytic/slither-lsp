@@ -366,6 +366,69 @@ class SlitherServer(LanguageServer):
         compilation and analysis if needed, and refreshing analysis output such as for slither detectors.
         :return:
         """
+        def analyze(compilation_target: CompilationTarget):
+            analyzed_successfully = True
+            compilation: Optional[CryticCompile] = None
+            analysis = None
+            analysis_error = None
+            detector_results = None
+            try:
+                self._logger.info(
+                    "Started compiling %s",
+                    compilation_target.target_basic.target,
+                )
+                # Compile our target
+                compilation = self._compile_target(compilation_target)
+
+                # Create our analysis.
+                analysis = Slither(compilation)
+
+                # Run detectors and obtain results
+                detector_classes, _ = get_detectors_and_printers()
+                self._logger.info(
+                    "Processing %s", compilation_target.target_basic.target
+                )
+                _, detector_results, _, _ = process_detectors_and_printers(
+                    analysis, detector_classes, []
+                )
+                # Parse detector results
+                if detector_results is not None and isinstance(detector_results, list):
+                    detector_results = [
+                        SlitherDetectorResult.from_dict(detector_result)
+                        for detector_result in detector_results
+                    ]
+                else:
+                    detector_results = None
+
+            except Exception as err:
+                self._logger.error(
+                    "Failed compiling %s: %s",
+                    compilation_target.target_basic.target,
+                    err,
+                )
+                # If we encounter an error, set our status.
+                analyzed_successfully = False
+                analysis_error = err
+
+            self._logger.info(
+                "Done compiling %s", compilation_target.target_basic.target
+            )
+
+            # Add our analysis
+            self.analyses.append(
+                AnalysisResult(
+                    succeeded=analyzed_successfully,
+                    compilation_target=compilation_target,
+                    compilation=compilation,
+                    analysis=analysis,
+                    error=analysis_error,
+                    detector_results=detector_results,
+                )
+            )
+
+            # Report analysis status to our client
+            self._report_compilation_progress()
+
         # First refresh our initial solidity target list for this workspace
         with self.solidity_files_lock:
             # If we're meant to re-scan our solidity files, do so to get an initial collection of solidity target
@@ -404,70 +467,7 @@ class SlitherServer(LanguageServer):
                 self.analyses = []
                 self._report_compilation_progress()
                 for compilation_target in self.compilation_targets:
-                    analyzed_successfully = True
-                    compilation: Optional[CryticCompile] = None
-                    analysis = None
-                    analysis_error = None
-                    detector_results = None
-                    try:
-                        self._logger.info(
-                            "Started compiling %s",
-                            compilation_target.target_basic.target,
-                        )
-                        # Compile our target
-                        compilation = self._compile_target(compilation_target)
-
-                        # Create our analysis.
-                        analysis = Slither(compilation)
-
-                        # Run detectors and obtain results
-                        detector_classes, _ = get_detectors_and_printers()
-                        self._logger.info(
-                            "Processing %s", compilation_target.target_basic.target
-                        )
-                        _, detector_results, _, _ = process_detectors_and_printers(
-                            analysis, detector_classes, []
-                        )
-                        # Parse detector results
-                        if detector_results is not None and isinstance(
-                            detector_results, list
-                        ):
-                            detector_results = [
-                                SlitherDetectorResult.from_dict(detector_result)
-                                for detector_result in detector_results
-                            ]
-                        else:
-                            detector_results = None
-
-                    except Exception as err:
-                        self._logger.error(
-                            "Failed compiling %s: %s",
-                            compilation_target.target_basic.target,
-                            err,
-                        )
-                        # If we encounter an error, set our status.
-                        analyzed_successfully = False
-                        analysis_error = err
-
-                    self._logger.info(
-                        "Done compiling %s", compilation_target.target_basic.target
-                    )
-
-                    # Add our analysis
-                    self.analyses.append(
-                        AnalysisResult(
-                            succeeded=analyzed_successfully,
-                            compilation_target=compilation_target,
-                            compilation=compilation,
-                            analysis=analysis,
-                            error=analysis_error,
-                            detector_results=detector_results,
-                        )
-                    )
-
-                    # Report analysis status to our client
-                    self._report_compilation_progress()
-
+                    analyze(compilation_target)
                 # Refresh our detector results
                 self._refresh_detector_output()
 

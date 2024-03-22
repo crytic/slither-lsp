@@ -587,9 +587,6 @@ class SlitherServer(LanguageServer):
                         target_filename_str: str = uri_to_fs_path(
                             params.text_document.uri
                         )
-                        target_filename = analysis_result.compilation.filename_lookup(
-                            target_filename_str
-                        )
 
                         # Obtain the offset for this line + character position
                         target_offset = (
@@ -629,9 +626,6 @@ class SlitherServer(LanguageServer):
                         # Obtain our filename for this file
                         target_filename_str: str = uri_to_fs_path(
                             params.text_document.uri
-                        )
-                        target_filename = analysis_result.compilation.filename_lookup(
-                            target_filename_str
                         )
 
                         # Obtain the offset for this line + character position
@@ -674,9 +668,6 @@ class SlitherServer(LanguageServer):
                         # Obtain our filename for this file
                         target_filename_str: str = uri_to_fs_path(
                             params.text_document.uri
-                        )
-                        target_filename = analysis_result.compilation.filename_lookup(
-                            target_filename_str
                         )
 
                         target_offset = (

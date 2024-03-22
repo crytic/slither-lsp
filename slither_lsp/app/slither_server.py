@@ -374,6 +374,7 @@ class SlitherServer(LanguageServer):
         compilation and analysis if needed, and refreshing analysis output such as for slither detectors.
         :return:
         """
+        detector_classes, _ = get_detectors_and_printers()
 
         def analyze(compilation_target: CompilationTarget):
             analyzed_successfully = True
@@ -393,7 +394,6 @@ class SlitherServer(LanguageServer):
                 analysis = Slither(compilation)
 
                 # Run detectors and obtain results
-                detector_classes, _ = get_detectors_and_printers()
                 self._logger.info(
                     "Processing %s", compilation_target.target_basic.target
                 )

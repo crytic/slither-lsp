@@ -1,7 +1,9 @@
 import logging
 import os
+from concurrent.futures import ThreadPoolExecutor, wait
 from functools import lru_cache
 from threading import Lock
+from time import sleep
 from typing import Dict, List, Optional, Set, Type
 
 import lsprotocol.types as lsp
@@ -92,13 +94,19 @@ class SlitherServer(LanguageServer):
 
     # Define our compilation variables
     analyses: List[AnalysisResult] = []
-    analyses_lock = Lock()
 
     # Define our slither diagnostics provider
     detector_settings: SlitherDetectorSettings = SlitherDetectorSettings(
         enabled=True, hidden_checks=[]
     )
     slither_diagnostics: Optional[SlitherDiagnostics] = None
+
+    refresh_lock = (
+        Lock()
+    )  # Makes sure at most one refresh operation is in flight at any point in time
+    REFRESH_WAIT_SECONDS = 1.0
+
+    analysis_pool = ThreadPoolExecutor()
 
     def __init__(self, logger: logging.Logger, *args):
         super().__init__(protocol_cls=SlitherProtocol, *args)
@@ -366,6 +374,7 @@ class SlitherServer(LanguageServer):
         compilation and analysis if needed, and refreshing analysis output such as for slither detectors.
         :return:
         """
+
         def analyze(compilation_target: CompilationTarget):
             analyzed_successfully = True
             compilation: Optional[CryticCompile] = None
@@ -429,6 +438,24 @@ class SlitherServer(LanguageServer):
             # Report analysis status to our client
             self._report_compilation_progress()
 
+        def start_refresh():
+            # Gives a chance to the main thread to update the compilation targets before starting
+            sleep(self.REFRESH_WAIT_SECONDS)
+
+            with self.refresh_lock:
+                targets_copy = []
+                with self.compilation_targets_lock:
+                    targets_copy = self.compilation_targets.copy()
+
+                futures = [
+                    self.analysis_pool.submit(analyze, target)
+                    for target in targets_copy
+                ]
+                wait(futures)
+
+                # Refresh our detector results
+                self._refresh_detector_output()
+
         # First refresh our initial solidity target list for this workspace
         with self.solidity_files_lock:
             # If we're meant to re-scan our solidity files, do so to get an initial collection of solidity target
@@ -460,16 +487,7 @@ class SlitherServer(LanguageServer):
                 if self.compilation_targets_autogenerate:
                     self.compilation_targets = self.generate_compilation_targets()
 
-        # Acquire locks for compilation + analysis, and see if our last change time exceeds our delay or we are forcing
-        # recompilation.
-        with self.compilation_targets_lock:
-            with self.analyses_lock:
-                self.analyses = []
-                self._report_compilation_progress()
-                for compilation_target in self.compilation_targets:
-                    analyze(compilation_target)
-                # Refresh our detector results
-                self._refresh_detector_output()
+        self.analysis_pool.submit(start_refresh)
 
     def generate_compilation_targets(self) -> List[CompilationTarget]:
         # TODO: Loop through self.solidity_files, parse files to determine which compilation buckets/parameters
@@ -576,39 +594,40 @@ class SlitherServer(LanguageServer):
         # Compile a list of definitions
         definitions = []
 
-        # Loop through all compilations
-        with self.analyses_lock:
-            for analysis_result in self.analyses:
-                if analysis_result.analysis is not None:
-                    # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
-                    #  these functions.
-                    try:
-                        # Obtain our filename for this file
-                        target_filename_str: str = uri_to_fs_path(
-                            params.text_document.uri
-                        )
+        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
+        # there's no need to acquire a lock here
+        analyses_copy = self.analyses.copy()
 
-                        # Obtain the offset for this line + character position
-                        target_offset = (
-                            analysis_result.compilation.get_global_offset_from_line(
-                                target_filename_str, params.position.line + 1
-                            )
+        # Loop through all compilations
+        for analysis_result in analyses_copy:
+            if analysis_result.analysis is not None:
+                # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
+                #  these functions.
+                try:
+                    # Obtain our filename for this file
+                    target_filename_str: str = uri_to_fs_path(params.text_document.uri)
+
+                    # Obtain the offset for this line + character position
+                    target_offset = (
+                        analysis_result.compilation.get_global_offset_from_line(
+                            target_filename_str, params.position.line + 1
                         )
-                        # Obtain sources
-                        sources = analysis_result.analysis.offset_to_definitions(
-                            target_filename_str,
-                            target_offset + params.position.character,
+                    )
+                    # Obtain sources
+                    sources = analysis_result.analysis.offset_to_definitions(
+                        target_filename_str,
+                        target_offset + params.position.character,
+                    )
+                except Exception:
+                    continue
+                else:
+                    # Add all definitions from this source.
+                    for source in sources:
+                        source_location: Optional[lsp.Location] = (
+                            self._source_to_location(source)
                         )
-                    except Exception:
-                        continue
-                    else:
-                        # Add all definitions from this source.
-                        for source in sources:
-                            source_location: Optional[lsp.Location] = (
-                                self._source_to_location(source)
-                            )
-                            if source_location is not None:
-                                definitions.append(source_location)
+                        if source_location is not None:
+                            definitions.append(source_location)
 
         return definitions
 
@@ -618,37 +637,38 @@ class SlitherServer(LanguageServer):
         # Compile a list of implementations
         implementations = []
 
-        # Loop through all compilations
-        with self.analyses_lock:
-            for analysis_result in self.analyses:
-                if analysis_result.analysis is not None:
-                    try:
-                        # Obtain our filename for this file
-                        target_filename_str: str = uri_to_fs_path(
-                            params.text_document.uri
-                        )
+        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
+        # there's no need to acquire a lock here
+        analyses_copy = self.analyses.copy()
 
-                        # Obtain the offset for this line + character position
-                        target_offset = (
-                            analysis_result.compilation.get_global_offset_from_line(
-                                target_filename_str, params.position.line + 1
-                            )
+        # Loop through all compilations
+        for analysis_result in analyses_copy:
+            if analysis_result.analysis is not None:
+                try:
+                    # Obtain our filename for this file
+                    target_filename_str: str = uri_to_fs_path(params.text_document.uri)
+
+                    # Obtain the offset for this line + character position
+                    target_offset = (
+                        analysis_result.compilation.get_global_offset_from_line(
+                            target_filename_str, params.position.line + 1
                         )
-                        # Obtain sources
-                        sources = analysis_result.analysis.offset_to_implementations(
-                            target_filename_str,
-                            target_offset + params.position.character,
+                    )
+                    # Obtain sources
+                    sources = analysis_result.analysis.offset_to_implementations(
+                        target_filename_str,
+                        target_offset + params.position.character,
+                    )
+                except Exception:
+                    continue
+                else:
+                    # Add all implementations from this source.
+                    for source in sources:
+                        source_location: Optional[lsp.Location] = (
+                            self._source_to_location(source)
                         )
-                    except Exception:
-                        continue
-                    else:
-                        # Add all implementations from this source.
-                        for source in sources:
-                            source_location: Optional[lsp.Location] = (
-                                self._source_to_location(source)
-                            )
-                            if source_location is not None:
-                                implementations.append(source_location)
+                        if source_location is not None:
+                            implementations.append(source_location)
 
         return implementations
 
@@ -658,40 +678,41 @@ class SlitherServer(LanguageServer):
         # Compile a list of references
         references = []
 
+        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
+        # there's no need to acquire a lock here
+        analyses_copy = self.analyses.copy()
+
         # Loop through all compilations
-        with self.analyses_lock:
-            for analysis_result in self.analyses:
-                if analysis_result.analysis is not None:
-                    # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
-                    #  these functions.
-                    try:
-                        # Obtain our filename for this file
-                        target_filename_str: str = uri_to_fs_path(
-                            params.text_document.uri
-                        )
+        for analysis_result in analyses_copy:
+            if analysis_result.analysis is not None:
+                # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
+                #  these functions.
+                try:
+                    # Obtain our filename for this file
+                    target_filename_str: str = uri_to_fs_path(params.text_document.uri)
 
-                        target_offset = (
-                            analysis_result.compilation.get_global_offset_from_line(
-                                target_filename_str, params.position.line + 1
-                            )
+                    target_offset = (
+                        analysis_result.compilation.get_global_offset_from_line(
+                            target_filename_str, params.position.line + 1
                         )
+                    )
 
-                        # Obtain sources
-                        sources: Set[Source] = (
-                            analysis_result.analysis.offset_to_references(
-                                target_filename_str,
-                                target_offset + params.position.character,
-                            )
+                    # Obtain sources
+                    sources: Set[Source] = (
+                        analysis_result.analysis.offset_to_references(
+                            target_filename_str,
+                            target_offset + params.position.character,
                         )
-                    except Exception:
-                        continue
-                    else:
-                        # Add all references from this source.
-                        for source in sources:
-                            source_location: Optional[lsp.Location] = (
-                                self._source_to_location(source)
-                            )
-                            if source_location is not None:
-                                references.append(source_location)
+                    )
+                except Exception:
+                    continue
+                else:
+                    # Add all references from this source.
+                    for source in sources:
+                        source_location: Optional[lsp.Location] = (
+                            self._source_to_location(source)
+                        )
+                        if source_location is not None:
+                            references.append(source_location)
 
         return references

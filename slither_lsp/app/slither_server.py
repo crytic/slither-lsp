@@ -4,7 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, wait
 from functools import lru_cache
 from threading import Lock
 from time import sleep
-from typing import Dict, List, Optional, Set, Type
+from typing import Dict, List, Optional, Set, Type, Callable, Set
 
 import lsprotocol.types as lsp
 from crytic_compile.crytic_compile import CryticCompile
@@ -590,11 +590,15 @@ class SlitherServer(LanguageServer):
             ),
         )
 
-    def _on_goto_definition(self, params: lsp.DefinitionParams) -> List[lsp.Location]:
+    def _inspect_analyses(
+        self,
+        target_filename_str: str,
+        line: int,
+        col: int,
+        func: Callable[[Slither, int], Set[Source]],
+    ) -> List[lsp.Location]:
         # Compile a list of definitions
-        definitions = []
-        # Obtain our filename for this file
-        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
+        results = []
 
         # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
         # there's no need to acquire a lock here
@@ -609,14 +613,11 @@ class SlitherServer(LanguageServer):
                     # Obtain the offset for this line + character position
                     target_offset = (
                         analysis_result.compilation.get_global_offset_from_line(
-                            target_filename_str, params.position.line + 1
+                            target_filename_str, line
                         )
                     )
                     # Obtain sources
-                    sources = analysis_result.analysis.offset_to_definitions(
-                        target_filename_str,
-                        target_offset + params.position.character,
-                    )
+                    sources = func(analysis_result.analysis, target_offset + col)
                 except Exception:
                     continue
                 else:
@@ -626,90 +627,49 @@ class SlitherServer(LanguageServer):
                             self._source_to_location(source)
                         )
                         if source_location is not None:
-                            definitions.append(source_location)
+                            results.append(source_location)
 
-        return definitions
+        return results
+
+    def _on_goto_definition(self, params: lsp.DefinitionParams) -> List[lsp.Location]:
+        # Obtain our filename for this file
+        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
+
+        return self._inspect_analyses(
+            target_filename_str,
+            params.position.line + 1,
+            params.position.character,
+            lambda analysis, offset: analysis.offset_to_definitions(
+                target_filename_str, offset
+            ),
+        )
 
     def _on_goto_implementation(
         self, params: lsp.ImplementationParams
     ) -> List[lsp.Location]:
-        # Compile a list of implementations
-        implementations = []
         # Obtain our filename for this file
         target_filename_str: str = uri_to_fs_path(params.text_document.uri)
 
-        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
-        # there's no need to acquire a lock here
-        analyses_copy = self.analyses.copy()
-
-        # Loop through all compilations
-        for analysis_result in analyses_copy:
-            if analysis_result.analysis is not None:
-                try:
-                    # Obtain the offset for this line + character position
-                    target_offset = (
-                        analysis_result.compilation.get_global_offset_from_line(
-                            target_filename_str, params.position.line + 1
-                        )
-                    )
-                    # Obtain sources
-                    sources = analysis_result.analysis.offset_to_implementations(
-                        target_filename_str,
-                        target_offset + params.position.character,
-                    )
-                except Exception:
-                    continue
-                else:
-                    # Add all implementations from this source.
-                    for source in sources:
-                        source_location: Optional[lsp.Location] = (
-                            self._source_to_location(source)
-                        )
-                        if source_location is not None:
-                            implementations.append(source_location)
-
-        return implementations
+        return self._inspect_analyses(
+            target_filename_str,
+            params.position.line + 1,
+            params.position.character,
+            lambda analysis, offset: analysis.offset_to_implementations(
+                target_filename_str, offset
+            ),
+        )
 
     def _on_find_references(
         self, params: lsp.ImplementationParams
     ) -> Optional[List[lsp.Location]]:
-        # Compile a list of references
-        references = []
         # Obtain our filename for this file
         target_filename_str: str = uri_to_fs_path(params.text_document.uri)
 
-        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
-        # there's no need to acquire a lock here
-        analyses_copy = self.analyses.copy()
-
-        # Loop through all compilations
-        for analysis_result in analyses_copy:
-            if analysis_result.analysis is not None:
-                # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
-                #  these functions.
-                try:
-                    target_offset = (
-                        analysis_result.compilation.get_global_offset_from_line(
-                            target_filename_str, params.position.line + 1
-                        )
-                    )
-
-                    # Obtain sources
-                    sources: Set[Source] = (
-                        analysis_result.analysis.offset_to_references(
-                            target_filename_str,
-                            target_offset + params.position.character,
-                        )
-                    )
-                except Exception:
-                    continue
-                else:
-                    # Add all references from this source.
-                    for source in sources:
-                        source_location: Optional[lsp.Location] = (
-                            self._source_to_location(source)
-                        )
-                        if source_location is not None:
-                            references.append(source_location)
-
-        return references
+        return self._inspect_analyses(
+            target_filename_str,
+            params.position.line + 1,
+            params.position.character,
+            lambda analysis, offset: analysis.offset_to_references(
+                target_filename_str, offset
+            ),
+        )

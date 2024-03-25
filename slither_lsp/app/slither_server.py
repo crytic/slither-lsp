@@ -582,10 +582,12 @@ class SlitherServer(LanguageServer):
             uri=fs_path_to_uri(source.filename.absolute),
             range=lsp.Range(
                 start=lsp.Position(
-                    line=source.lines[0] - 1, character=source.starting_column - 1
+                    line=source.lines[0] - 1,
+                    character=max(0, source.starting_column - 1),
                 ),
                 end=lsp.Position(
-                    line=source.lines[-1] - 1, character=source.ending_column - 1
+                    line=source.lines[-1] - 1,
+                    character=max(0, source.ending_column - 1),
                 ),
             ),
         )

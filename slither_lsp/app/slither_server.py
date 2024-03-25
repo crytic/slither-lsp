@@ -593,6 +593,8 @@ class SlitherServer(LanguageServer):
     def _on_goto_definition(self, params: lsp.DefinitionParams) -> List[lsp.Location]:
         # Compile a list of definitions
         definitions = []
+        # Obtain our filename for this file
+        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
 
         # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
         # there's no need to acquire a lock here
@@ -604,9 +606,6 @@ class SlitherServer(LanguageServer):
                 # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
                 #  these functions.
                 try:
-                    # Obtain our filename for this file
-                    target_filename_str: str = uri_to_fs_path(params.text_document.uri)
-
                     # Obtain the offset for this line + character position
                     target_offset = (
                         analysis_result.compilation.get_global_offset_from_line(
@@ -636,6 +635,8 @@ class SlitherServer(LanguageServer):
     ) -> List[lsp.Location]:
         # Compile a list of implementations
         implementations = []
+        # Obtain our filename for this file
+        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
 
         # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
         # there's no need to acquire a lock here
@@ -645,9 +646,6 @@ class SlitherServer(LanguageServer):
         for analysis_result in analyses_copy:
             if analysis_result.analysis is not None:
                 try:
-                    # Obtain our filename for this file
-                    target_filename_str: str = uri_to_fs_path(params.text_document.uri)
-
                     # Obtain the offset for this line + character position
                     target_offset = (
                         analysis_result.compilation.get_global_offset_from_line(
@@ -677,6 +675,8 @@ class SlitherServer(LanguageServer):
     ) -> Optional[List[lsp.Location]]:
         # Compile a list of references
         references = []
+        # Obtain our filename for this file
+        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
 
         # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
         # there's no need to acquire a lock here
@@ -688,9 +688,6 @@ class SlitherServer(LanguageServer):
                 # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
                 #  these functions.
                 try:
-                    # Obtain our filename for this file
-                    target_filename_str: str = uri_to_fs_path(params.text_document.uri)
-
                     target_offset = (
                         analysis_result.compilation.get_global_offset_from_line(
                             target_filename_str, params.position.line + 1

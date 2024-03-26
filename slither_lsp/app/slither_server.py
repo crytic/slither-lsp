@@ -19,7 +19,9 @@ from slither.__main__ import (
 from slither.__main__ import (
     get_detectors_and_printers,
 )
+from slither.core.declarations import Function
 from slither.core.source_mapping.source_mapping import Source
+from slither.utils.source_mapping import get_definition
 
 from slither_lsp.app.feature_analyses.slither_diagnostics import SlitherDiagnostics
 from slither_lsp.app.types.analysis_structures import (
@@ -604,6 +606,20 @@ class SlitherServer(LanguageServer):
         return lsp.Location(
             uri=fs_path_to_uri(source.filename.absolute),
             range=SlitherServer._source_to_range(source),
+        )
+
+    @staticmethod
+    def _get_function_name_range(func: Function, comp: CryticCompile) -> lsp.Range:
+        name_pos = get_definition(func, comp)
+        return lsp.Range(
+            start=lsp.Position(
+                line=name_pos.lines[0] - 1,
+                character=name_pos.starting_column - 1,
+            ),
+            end=lsp.Position(
+                line=name_pos.lines[0] - 1,
+                character=name_pos.starting_column + len(func.name) - 1,
+            ),
         )
 
     def _inspect_analyses(

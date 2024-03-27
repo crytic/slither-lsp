@@ -1,10 +1,21 @@
 import logging
 import os
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, wait
+from dataclasses import dataclass
 from functools import lru_cache
 from threading import Lock
 from time import sleep
-from typing import Dict, List, Optional, Set, Type, Callable, Set
+from typing import (
+    Callable,
+    Dict,
+    List,
+    Optional,
+    Set,
+    Tuple,
+    Type,
+    TypeAlias,
+)
 
 import lsprotocol.types as lsp
 from crytic_compile.crytic_compile import CryticCompile
@@ -21,6 +32,7 @@ from slither.__main__ import (
 )
 from slither.core.declarations import Function
 from slither.core.source_mapping.source_mapping import Source
+from slither.slithir.operations import HighLevelCall, InternalCall
 from slither.utils.source_mapping import get_definition
 
 from slither_lsp.app.feature_analyses.slither_diagnostics import SlitherDiagnostics
@@ -53,6 +65,34 @@ from slither_lsp.app.utils.file_paths import (
 METHOD_TO_OPTIONS[lsp.WORKSPACE_DID_CHANGE_WATCHED_FILES] = (
     lsp.DidChangeWatchedFilesRegistrationOptions
 )
+
+# Type definitions for call hierarchy
+Pos: TypeAlias = Tuple[int, int]
+Range: TypeAlias = Tuple[Pos, Pos]
+
+
+def to_lsp_pos(pos: Pos) -> lsp.Position:
+    return lsp.Position(line=pos[0], character=pos[1])
+
+
+def to_lsp_range(range: Range) -> lsp.Range:
+    return lsp.Range(start=to_lsp_pos(range[0]), end=to_lsp_pos(range[1]))
+
+
+def to_pos(pos: lsp.Position) -> Pos:
+    return (pos.line, pos.character)
+
+
+def to_range(range: lsp.Range) -> Range:
+    return (to_pos(range.start), to_pos(range.end))
+
+
+@dataclass(frozen=True)
+class CallItem:
+    name: str
+    range: Range
+    filename: str
+    offset: str
 
 
 class SlitherProtocol(LanguageServerProtocol):

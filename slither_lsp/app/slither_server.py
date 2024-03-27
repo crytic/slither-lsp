@@ -214,6 +214,11 @@ class SlitherServer(LanguageServer):
         def on_find_references(ls: SlitherServer, params):
             return ls._on_find_references(params)
 
+        @self.thread()
+        @self.feature(lsp.TEXT_DOCUMENT_PREPARE_CALL_HIERARCHY)
+        def on_prepare_call_hierarchy(ls: SlitherServer, params):
+            return ls._on_prepare_call_hierarchy(params)
+
     @property
     def workspace_opened(self):
         """
@@ -745,3 +750,60 @@ class SlitherServer(LanguageServer):
                 target_filename_str, offset
             ),
         )
+
+    def _on_prepare_call_hierarchy(
+        self, params: lsp.CallHierarchyPrepareParams
+    ) -> Optional[List[lsp.CallHierarchyItem]]:
+        """
+        `textDocument/prepareCallHierarchy` doesn't actually produce
+        the call hierarchy in this case, it only detects what objects
+        we are trying to produce the call hierarchy for.
+        The data returned from this method will be sent by the client
+        back to the "get incoming/outgoing calls" later.
+        """
+        res: Dict[Tuple[str, int], lsp.CallHierarchyItem] = {}
+
+        # Obtain our filename for this file
+        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
+
+        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
+        # there's no need to acquire a lock here
+        analyses_copy = self.analyses.copy()
+
+        # Loop through all compilations
+        for analysis_result in analyses_copy:
+            if analysis_result.analysis is None:
+                continue
+            # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
+            #  these functions.
+            try:
+                # Obtain the offset for this line + character position
+                target_offset = analysis_result.compilation.get_global_offset_from_line(
+                    target_filename_str, params.position.line + 1
+                )
+                # Obtain objects
+                objects = analysis_result.analysis.offset_to_objects(
+                    target_filename_str, target_offset + params.position.character
+                )
+            except Exception:
+                continue
+            else:
+                for obj in objects:
+                    source = obj.source_mapping
+                    if not isinstance(obj, Function):
+                        continue
+                    offset = get_definition(obj, analysis_result.compilation).start
+                    res[(target_filename_str, offset)] = lsp.CallHierarchyItem(
+                        name=obj.canonical_name,
+                        kind=lsp.SymbolKind.Function,
+                        uri=fs_path_to_uri(source.filename.absolute),
+                        range=self._source_to_range(source),
+                        selection_range=self._get_function_name_range(
+                            obj, analysis_result.compilation
+                        ),
+                        data={
+                            "filename": target_filename_str,
+                            "offset": offset,
+                        },
+                    )
+        return [elem for elem in res.values()]

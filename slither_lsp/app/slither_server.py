@@ -224,6 +224,11 @@ class SlitherServer(LanguageServer):
         def on_get_incoming_calls(ls: SlitherServer, params):
             return ls._on_get_incoming_calls(params)
 
+        @self.thread()
+        @self.feature(lsp.CALL_HIERARCHY_OUTGOING_CALLS)
+        def on_get_outgoing_calls(ls: SlitherServer, params):
+            return ls._on_get_outgoing_calls(params)
+
     @property
     def workspace_opened(self):
         """
@@ -893,4 +898,74 @@ class SlitherServer(LanguageServer):
                 from_ranges=[to_lsp_range(range) for range in ranges],
             )
             for (call_from, ranges) in res.items()
+        ]
+
+    def _on_get_outgoing_calls(
+        self, params: lsp.CallHierarchyOutgoingCallsParams
+    ) -> Optional[List[lsp.CallHierarchyOutgoingCall]]:
+        res: Dict[CallItem, Set[Range]] = defaultdict(set)
+
+        # Obtain our filename for this file
+        target_filename_str = params.item.data["filename"]
+        target_offset = params.item.data["offset"]
+
+        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
+        # there's no need to acquire a lock here
+        analyses_copy = self.analyses.copy()
+
+        # Loop through all compilations
+        for analysis_result in analyses_copy:
+            if analysis_result.analysis is None:
+                continue
+            # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
+            #  these functions.
+            try:
+                objects = analysis_result.analysis.offset_to_objects(
+                    target_filename_str, target_offset
+                )
+            except Exception:
+                continue
+            else:
+                for obj in objects:
+                    if not isinstance(obj, Function):
+                        continue
+                    calls = [
+                        op
+                        for op in obj.all_slithir_operations()
+                        if isinstance(op, (InternalCall, HighLevelCall))
+                    ]
+                    for call in calls:
+                        if not isinstance(call.function, Function):
+                            continue
+                        call_to = call.function
+                        expr_range = self._source_to_range(
+                            call.expression.source_mapping
+                        )
+                        func_range = self._source_to_range(call_to.source_mapping)
+                        item = CallItem(
+                            name=call_to.canonical_name,
+                            range=to_range(func_range),
+                            filename=call_to.source_mapping.filename.absolute,
+                            offset=get_definition(
+                                call_to, analysis_result.compilation
+                            ).start,
+                        )
+                        res[item].add(to_range(expr_range))
+
+        return [
+            lsp.CallHierarchyOutgoingCall(
+                to=lsp.CallHierarchyItem(
+                    name=call_to.name,
+                    kind=lsp.SymbolKind.Function,
+                    uri=fs_path_to_uri(call_to.filename),
+                    range=to_lsp_range(call_to.range),
+                    selection_range=to_lsp_range(call_to.range),
+                    data={
+                        "filename": call_to.filename,
+                        "offset": call_to.offset,
+                    },
+                ),
+                from_ranges=[to_lsp_range(range) for range in ranges],
+            )
+            for (call_to, ranges) in res.items()
         ]

@@ -219,6 +219,11 @@ class SlitherServer(LanguageServer):
         def on_prepare_call_hierarchy(ls: SlitherServer, params):
             return ls._on_prepare_call_hierarchy(params)
 
+        @self.thread()
+        @self.feature(lsp.CALL_HIERARCHY_INCOMING_CALLS)
+        def on_get_incoming_calls(ls: SlitherServer, params):
+            return ls._on_get_incoming_calls(params)
+
     @property
     def workspace_opened(self):
         """
@@ -807,3 +812,85 @@ class SlitherServer(LanguageServer):
                         },
                     )
         return [elem for elem in res.values()]
+
+    def _on_get_incoming_calls(
+        self, params: lsp.CallHierarchyIncomingCallsParams
+    ) -> Optional[List[lsp.CallHierarchyIncomingCall]]:
+        res: Dict[CallItem, Set[Range]] = defaultdict(set)
+
+        # Obtain our filename for this file
+        # These will have been populated either by
+        # the initial "prepare call hierarchy" or by
+        # other calls to "get incoming calls"
+        target_filename_str = params.item.data["filename"]
+        target_offset = params.item.data["offset"]
+
+        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
+        # there's no need to acquire a lock here
+        analyses_copy = self.analyses.copy()
+
+        referenced_functions: List[Function] = []
+
+        # Loop through all compilations
+        for analysis_result in analyses_copy:
+            if analysis_result.analysis is None:
+                continue
+            # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
+            #  these functions.
+            try:
+                objects = analysis_result.analysis.offset_to_objects(
+                    target_filename_str, target_offset
+                )
+            except Exception:
+                continue
+            else:
+                for obj in objects:
+                    if not isinstance(obj, Function):
+                        continue
+                    referenced_functions.append(obj)
+
+        calls = [
+            (f, op, analysis_result.compilation)
+            for analysis_result in analyses_copy
+            if analysis_result.analysis is not None
+            for comp_unit in analysis_result.analysis.compilation_units
+            for f in comp_unit.functions
+            for op in f.all_slithir_operations()
+            if isinstance(op, (InternalCall, HighLevelCall))
+            and isinstance(op.function, Function)
+        ]
+
+        for func in referenced_functions:
+            for call_from, call, call_comp in calls:
+                # TODO(frabert): Ideally we'd do this instead, but apparently the same function may be represented by multiple objects in Slither
+                # if call.function is not func:
+                #     continue
+
+                if call.function.canonical_name != func.canonical_name:
+                    continue
+                expr_range = self._source_to_range(call.expression.source_mapping)
+                func_range = self._source_to_range(call_from.source_mapping)
+                item = CallItem(
+                    name=call_from.canonical_name,
+                    range=to_range(func_range),
+                    filename=call_from.source_mapping.filename.absolute,
+                    offset=get_definition(call_from, call_comp).start,
+                )
+                res[item].add(to_range(expr_range))
+        return [
+            lsp.CallHierarchyIncomingCall(
+                from_=lsp.CallHierarchyItem(
+                    name=call_from.name,
+                    kind=lsp.SymbolKind.Function,
+                    uri=fs_path_to_uri(call_from.filename),
+                    range=to_lsp_range(call_from.range),
+                    selection_range=to_lsp_range(call_from.range),
+                    data={
+                        "filename": call_from.filename,
+                        "offset": call_from.offset,
+                    },
+                ),
+                from_ranges=[to_lsp_range(range) for range in ranges],
+            )
+            for (call_from, ranges) in res.items()
+        ]

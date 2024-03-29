@@ -761,6 +761,22 @@ class SlitherServer(LanguageServer):
             ),
         )
 
+    def _get_analyses_containing(
+        self, filename: str
+    ) -> List[Tuple[Slither, CryticCompile]]:
+        def lookup(comp):
+            try:
+                return comp.filename_lookup(filename)
+            except ValueError:
+                return None
+
+        return [
+            (analysis_result.analysis, analysis_result.compilation)
+            for analysis_result in self.analyses.copy()
+            if analysis_result.analysis is not None
+            and lookup(analysis_result.compilation) is not None
+        ]
+
     def _on_prepare_call_hierarchy(
         self, params: lsp.CallHierarchyPrepareParams
     ) -> Optional[List[lsp.CallHierarchyItem]]:
@@ -776,46 +792,31 @@ class SlitherServer(LanguageServer):
         # Obtain our filename for this file
         target_filename_str: str = uri_to_fs_path(params.text_document.uri)
 
-        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
-        # there's no need to acquire a lock here
-        analyses_copy = self.analyses.copy()
-
-        # Loop through all compilations
-        for analysis_result in analyses_copy:
-            if analysis_result.analysis is None:
-                continue
-            # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
-            #  these functions.
-            try:
-                # Obtain the offset for this line + character position
-                target_offset = analysis_result.compilation.get_global_offset_from_line(
-                    target_filename_str, params.position.line + 1
+        for analysis, comp in self._get_analyses_containing(target_filename_str):
+            # Obtain the offset for this line + character position
+            target_offset = comp.get_global_offset_from_line(
+                target_filename_str, params.position.line + 1
+            )
+            # Obtain objects
+            objects = analysis.offset_to_objects(
+                target_filename_str, target_offset + params.position.character
+            )
+            for obj in objects:
+                source = obj.source_mapping
+                if not isinstance(obj, Function):
+                    continue
+                offset = get_definition(obj, comp).start
+                res[(target_filename_str, offset)] = lsp.CallHierarchyItem(
+                    name=obj.canonical_name,
+                    kind=lsp.SymbolKind.Function,
+                    uri=fs_path_to_uri(source.filename.absolute),
+                    range=self._source_to_range(source),
+                    selection_range=self._get_function_name_range(obj, comp),
+                    data={
+                        "filename": target_filename_str,
+                        "offset": offset,
+                    },
                 )
-                # Obtain objects
-                objects = analysis_result.analysis.offset_to_objects(
-                    target_filename_str, target_offset + params.position.character
-                )
-            except Exception:
-                continue
-            else:
-                for obj in objects:
-                    source = obj.source_mapping
-                    if not isinstance(obj, Function):
-                        continue
-                    offset = get_definition(obj, analysis_result.compilation).start
-                    res[(target_filename_str, offset)] = lsp.CallHierarchyItem(
-                        name=obj.canonical_name,
-                        kind=lsp.SymbolKind.Function,
-                        uri=fs_path_to_uri(source.filename.absolute),
-                        range=self._source_to_range(source),
-                        selection_range=self._get_function_name_range(
-                            obj, analysis_result.compilation
-                        ),
-                        data={
-                            "filename": target_filename_str,
-                            "offset": offset,
-                        },
-                    )
         return [elem for elem in res.values()]
 
     def _on_get_incoming_calls(
@@ -834,25 +835,12 @@ class SlitherServer(LanguageServer):
         # there's no need to acquire a lock here
         analyses_copy = self.analyses.copy()
 
-        referenced_functions: List[Function] = []
-
-        # Loop through all compilations
-        for analysis_result in analyses_copy:
-            if analysis_result.analysis is None:
-                continue
-            # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
-            #  these functions.
-            try:
-                objects = analysis_result.analysis.offset_to_objects(
-                    target_filename_str, target_offset
-                )
-            except Exception:
-                continue
-            else:
-                for obj in objects:
-                    if not isinstance(obj, Function):
-                        continue
-                    referenced_functions.append(obj)
+        referenced_functions = [
+            obj
+            for analysis, comp in self._get_analyses_containing(target_filename_str)
+            for obj in analysis.offset_to_objects(target_filename_str, target_offset)
+            if isinstance(obj, Function)
+        ]
 
         calls = [
             (f, op, analysis_result.compilation)
@@ -909,48 +897,29 @@ class SlitherServer(LanguageServer):
         target_filename_str = params.item.data["filename"]
         target_offset = params.item.data["offset"]
 
-        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
-        # there's no need to acquire a lock here
-        analyses_copy = self.analyses.copy()
-
-        # Loop through all compilations
-        for analysis_result in analyses_copy:
-            if analysis_result.analysis is None:
-                continue
-            # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
-            #  these functions.
-            try:
-                objects = analysis_result.analysis.offset_to_objects(
-                    target_filename_str, target_offset
-                )
-            except Exception:
-                continue
-            else:
-                for obj in objects:
-                    if not isinstance(obj, Function):
+        for analysis, comp in self._get_analyses_containing(target_filename_str):
+            objects = analysis.offset_to_objects(target_filename_str, target_offset)
+            for obj in objects:
+                if not isinstance(obj, Function):
+                    continue
+                calls = [
+                    op
+                    for op in obj.all_slithir_operations()
+                    if isinstance(op, (InternalCall, HighLevelCall))
+                ]
+                for call in calls:
+                    if not isinstance(call.function, Function):
                         continue
-                    calls = [
-                        op
-                        for op in obj.all_slithir_operations()
-                        if isinstance(op, (InternalCall, HighLevelCall))
-                    ]
-                    for call in calls:
-                        if not isinstance(call.function, Function):
-                            continue
-                        call_to = call.function
-                        expr_range = self._source_to_range(
-                            call.expression.source_mapping
-                        )
-                        func_range = self._source_to_range(call_to.source_mapping)
-                        item = CallItem(
-                            name=call_to.canonical_name,
-                            range=to_range(func_range),
-                            filename=call_to.source_mapping.filename.absolute,
-                            offset=get_definition(
-                                call_to, analysis_result.compilation
-                            ).start,
-                        )
-                        res[item].add(to_range(expr_range))
+                    call_to = call.function
+                    expr_range = self._source_to_range(call.expression.source_mapping)
+                    func_range = self._source_to_range(call_to.source_mapping)
+                    item = CallItem(
+                        name=call_to.canonical_name,
+                        range=to_range(func_range),
+                        filename=call_to.source_mapping.filename.absolute,
+                        offset=get_definition(call_to, comp).start,
+                    )
+                    res[item].add(to_range(expr_range))
 
         return [
             lsp.CallHierarchyOutgoingCall(

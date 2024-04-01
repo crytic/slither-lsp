@@ -60,6 +60,11 @@ from slither_lsp.app.utils.file_paths import (
     normalize_uri,
     uri_to_fs_path,
 )
+from slither_lsp.app.utils.ranges import (
+    get_object_name_range,
+    source_to_location,
+    source_to_range,
+)
 
 # TODO(frabert): Maybe this should be upstreamed? https://github.com/openlawlibrary/pygls/discussions/338
 METHOD_TO_OPTIONS[lsp.WORKSPACE_DID_CHANGE_WATCHED_FILES] = (
@@ -647,62 +652,6 @@ class SlitherServer(LanguageServer):
             f"provided."
         )
 
-    @staticmethod
-    def _source_to_range(source: Source) -> Optional[lsp.Range]:
-        """
-        Converts a slither Source mapping object into a Language Server Protocol Location.
-        :param source: The slither Source mapping object to convert into a Location.
-        :return: Returns a Location representing the slither Source mapping object. None if no valid mapping exists.
-        """
-        # If there are no mapped lines, we don't return a location.
-        if len(source.lines) == 0:
-            return None
-
-        # Otherwise we can return a location fairly easily.
-        return lsp.Range(
-            start=lsp.Position(
-                line=source.lines[0] - 1,
-                character=max(0, source.starting_column - 1),
-            ),
-            end=lsp.Position(
-                line=source.lines[-1] - 1,
-                character=max(0, source.ending_column - 1),
-            ),
-        )
-
-    @staticmethod
-    def _source_to_location(source: Source) -> Optional[lsp.Location]:
-        """
-        Converts a slither Source mapping object into a Language Server Protocol Location.
-        :param source: The slither Source mapping object to convert into a Location.
-        :return: Returns a Location representing the slither Source mapping object. None if no valid mapping exists.
-        """
-        # If there are no mapped lines, we don't return a location.
-        if len(source.lines) == 0:
-            return None
-
-        # Otherwise we can return a location fairly easily.
-        return lsp.Location(
-            uri=fs_path_to_uri(source.filename.absolute),
-            range=SlitherServer._source_to_range(source),
-        )
-
-    @staticmethod
-    def _get_object_name_range(
-        obj: Function | Contract, comp: CryticCompile
-    ) -> lsp.Range:
-        name_pos = get_definition(obj, comp)
-        return lsp.Range(
-            start=lsp.Position(
-                line=name_pos.lines[0] - 1,
-                character=name_pos.starting_column - 1,
-            ),
-            end=lsp.Position(
-                line=name_pos.lines[0] - 1,
-                character=name_pos.starting_column + len(obj.name) - 1,
-            ),
-        )
-
     def _inspect_analyses(
         self,
         target_filename_str: str,
@@ -736,8 +685,8 @@ class SlitherServer(LanguageServer):
                 else:
                     # Add all definitions from this source.
                     for source in sources:
-                        source_location: Optional[lsp.Location] = (
-                            self._source_to_location(source)
+                        source_location: Optional[lsp.Location] = source_to_location(
+                            source
                         )
                         if source_location is not None:
                             results.append(source_location)
@@ -836,8 +785,8 @@ class SlitherServer(LanguageServer):
                     name=obj.canonical_name,
                     kind=lsp.SymbolKind.Function,
                     uri=fs_path_to_uri(source.filename.absolute),
-                    range=self._source_to_range(source),
-                    selection_range=self._get_object_name_range(obj, comp),
+                    range=source_to_range(source),
+                    selection_range=get_object_name_range(obj, comp),
                     data={
                         "filename": target_filename_str,
                         "offset": offset,
@@ -887,8 +836,8 @@ class SlitherServer(LanguageServer):
 
                 if call.function.canonical_name != func.canonical_name:
                     continue
-                expr_range = self._source_to_range(call.expression.source_mapping)
-                func_range = self._source_to_range(call_from.source_mapping)
+                expr_range = source_to_range(call.expression.source_mapping)
+                func_range = source_to_range(call_from.source_mapping)
                 item = CallItem(
                     name=call_from.canonical_name,
                     range=to_range(func_range),
@@ -937,8 +886,8 @@ class SlitherServer(LanguageServer):
                     if not isinstance(call.function, Function):
                         continue
                     call_to = call.function
-                    expr_range = self._source_to_range(call.expression.source_mapping)
-                    func_range = self._source_to_range(call_to.source_mapping)
+                    expr_range = source_to_range(call.expression.source_mapping)
+                    func_range = source_to_range(call_to.source_mapping)
                     item = CallItem(
                         name=call_to.canonical_name,
                         range=to_range(func_range),
@@ -987,7 +936,7 @@ class SlitherServer(LanguageServer):
                 if not isinstance(obj, Contract):
                     continue
                 offset = get_definition(obj, comp).start
-                range = self._get_object_name_range(obj, comp)
+                range = get_object_name_range(obj, comp)
                 if obj.is_interface:
                     kind = lsp.SymbolKind.Interface
                 else:
@@ -1049,7 +998,7 @@ class SlitherServer(LanguageServer):
             for other_contract, other_contract_comp in contracts:
                 if contract not in other_contract.immediate_inheritance:
                     continue
-                range = self._get_object_name_range(other_contract, other_contract_comp)
+                range = get_object_name_range(other_contract, other_contract_comp)
                 if other_contract.is_interface:
                     kind = lsp.SymbolKind.Interface
                 else:
@@ -1100,7 +1049,7 @@ class SlitherServer(LanguageServer):
         ]
 
         for sup, comp in supertypes:
-            range = self._get_object_name_range(sup, comp)
+            range = get_object_name_range(sup, comp)
             if sup.is_interface:
                 kind = lsp.SymbolKind.Interface
             else:

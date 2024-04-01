@@ -1,21 +1,11 @@
 import logging
 import os
-from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, wait
 from dataclasses import dataclass
 from functools import lru_cache
 from threading import Lock
 from time import sleep
-from typing import (
-    Callable,
-    Dict,
-    List,
-    Optional,
-    Set,
-    Tuple,
-    Type,
-    TypeAlias,
-)
+from typing import Dict, List, Optional, Set, Tuple, Type
 
 import lsprotocol.types as lsp
 from crytic_compile.crytic_compile import CryticCompile
@@ -30,17 +20,19 @@ from slither.__main__ import (
 from slither.__main__ import (
     get_detectors_and_printers,
 )
-from slither.core.declarations import Contract, Function
-from slither.core.source_mapping.source_mapping import Source
-from slither.slithir.operations import HighLevelCall, InternalCall
+from slither.core.declarations import Contract
 from slither.utils.source_mapping import get_definition
-from slither_lsp.app.request_handlers import (
-    register_on_goto_implementation,
-    register_on_goto_definition,
-    register_on_find_references,
-)
 
 from slither_lsp.app.feature_analyses.slither_diagnostics import SlitherDiagnostics
+from slither_lsp.app.request_handlers import (
+    register_on_find_references,
+    register_on_get_incoming_calls,
+    register_on_get_outgoing_calls,
+    register_on_goto_definition,
+    register_on_goto_implementation,
+    register_on_prepare_call_hierarchy,
+)
+from slither_lsp.app.request_handlers.types import Range, to_lsp_range, to_range
 from slither_lsp.app.types.analysis_structures import (
     AnalysisResult,
     CompilationTarget,
@@ -65,44 +57,12 @@ from slither_lsp.app.utils.file_paths import (
     normalize_uri,
     uri_to_fs_path,
 )
-from slither_lsp.app.utils.ranges import (
-    get_object_name_range,
-    source_to_location,
-    source_to_range,
-)
+from slither_lsp.app.utils.ranges import get_object_name_range
 
 # TODO(frabert): Maybe this should be upstreamed? https://github.com/openlawlibrary/pygls/discussions/338
 METHOD_TO_OPTIONS[lsp.WORKSPACE_DID_CHANGE_WATCHED_FILES] = (
     lsp.DidChangeWatchedFilesRegistrationOptions
 )
-
-# Type definitions for call hierarchy
-Pos: TypeAlias = Tuple[int, int]
-Range: TypeAlias = Tuple[Pos, Pos]
-
-
-def to_lsp_pos(pos: Pos) -> lsp.Position:
-    return lsp.Position(line=pos[0], character=pos[1])
-
-
-def to_lsp_range(range: Range) -> lsp.Range:
-    return lsp.Range(start=to_lsp_pos(range[0]), end=to_lsp_pos(range[1]))
-
-
-def to_pos(pos: lsp.Position) -> Pos:
-    return (pos.line, pos.character)
-
-
-def to_range(range: lsp.Range) -> Range:
-    return (to_pos(range.start), to_pos(range.end))
-
-
-@dataclass(frozen=True)
-class CallItem:
-    name: str
-    range: Range
-    filename: str
-    offset: str
 
 
 @dataclass(frozen=True)
@@ -222,20 +182,9 @@ class SlitherServer(LanguageServer):
         register_on_goto_implementation(self)
         register_on_find_references(self)
 
-        @self.thread()
-        @self.feature(lsp.TEXT_DOCUMENT_PREPARE_CALL_HIERARCHY)
-        def on_prepare_call_hierarchy(ls: SlitherServer, params):
-            return ls._on_prepare_call_hierarchy(params)
-
-        @self.thread()
-        @self.feature(lsp.CALL_HIERARCHY_INCOMING_CALLS)
-        def on_get_incoming_calls(ls: SlitherServer, params):
-            return ls._on_get_incoming_calls(params)
-
-        @self.thread()
-        @self.feature(lsp.CALL_HIERARCHY_OUTGOING_CALLS)
-        def on_get_outgoing_calls(ls: SlitherServer, params):
-            return ls._on_get_outgoing_calls(params)
+        register_on_prepare_call_hierarchy(self)
+        register_on_get_incoming_calls(self)
+        register_on_get_outgoing_calls(self)
 
         @self.thread()
         @self.feature(lsp.TEXT_DOCUMENT_PREPARE_TYPE_HIERARCHY)
@@ -646,7 +595,7 @@ class SlitherServer(LanguageServer):
             f"provided."
         )
 
-    def _get_analyses_containing(
+    def get_analyses_containing(
         self, filename: str
     ) -> List[Tuple[Slither, CryticCompile]]:
         def lookup(comp):
@@ -662,168 +611,6 @@ class SlitherServer(LanguageServer):
             and lookup(analysis_result.compilation) is not None
         ]
 
-    def _on_prepare_call_hierarchy(
-        self, params: lsp.CallHierarchyPrepareParams
-    ) -> Optional[List[lsp.CallHierarchyItem]]:
-        """
-        `textDocument/prepareCallHierarchy` doesn't actually produce
-        the call hierarchy in this case, it only detects what objects
-        we are trying to produce the call hierarchy for.
-        The data returned from this method will be sent by the client
-        back to the "get incoming/outgoing calls" later.
-        """
-        res: Dict[Tuple[str, int], lsp.CallHierarchyItem] = {}
-
-        # Obtain our filename for this file
-        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
-
-        for analysis, comp in self._get_analyses_containing(target_filename_str):
-            # Obtain the offset for this line + character position
-            target_offset = comp.get_global_offset_from_line(
-                target_filename_str, params.position.line + 1
-            )
-            # Obtain objects
-            objects = analysis.offset_to_objects(
-                target_filename_str, target_offset + params.position.character
-            )
-            for obj in objects:
-                source = obj.source_mapping
-                if not isinstance(obj, Function):
-                    continue
-                offset = get_definition(obj, comp).start
-                res[(target_filename_str, offset)] = lsp.CallHierarchyItem(
-                    name=obj.canonical_name,
-                    kind=lsp.SymbolKind.Function,
-                    uri=fs_path_to_uri(source.filename.absolute),
-                    range=source_to_range(source),
-                    selection_range=get_object_name_range(obj, comp),
-                    data={
-                        "filename": target_filename_str,
-                        "offset": offset,
-                    },
-                )
-        return [elem for elem in res.values()]
-
-    def _on_get_incoming_calls(
-        self, params: lsp.CallHierarchyIncomingCallsParams
-    ) -> Optional[List[lsp.CallHierarchyIncomingCall]]:
-        res: Dict[CallItem, Set[Range]] = defaultdict(set)
-
-        # Obtain our filename for this file
-        # These will have been populated either by
-        # the initial "prepare call hierarchy" or by
-        # other calls to "get incoming calls"
-        target_filename_str = params.item.data["filename"]
-        target_offset = params.item.data["offset"]
-
-        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
-        # there's no need to acquire a lock here
-        analyses_copy = self.analyses.copy()
-
-        referenced_functions = [
-            obj
-            for analysis, comp in self._get_analyses_containing(target_filename_str)
-            for obj in analysis.offset_to_objects(target_filename_str, target_offset)
-            if isinstance(obj, Function)
-        ]
-
-        calls = [
-            (f, op, analysis_result.compilation)
-            for analysis_result in analyses_copy
-            if analysis_result.analysis is not None
-            for comp_unit in analysis_result.analysis.compilation_units
-            for f in comp_unit.functions
-            for op in f.all_slithir_operations()
-            if isinstance(op, (InternalCall, HighLevelCall))
-            and isinstance(op.function, Function)
-        ]
-
-        for func in referenced_functions:
-            for call_from, call, call_comp in calls:
-                # TODO(frabert): Ideally we'd do this instead, but apparently the same function may be represented by multiple objects in Slither
-                # if call.function is not func:
-                #     continue
-
-                if call.function.canonical_name != func.canonical_name:
-                    continue
-                expr_range = source_to_range(call.expression.source_mapping)
-                func_range = source_to_range(call_from.source_mapping)
-                item = CallItem(
-                    name=call_from.canonical_name,
-                    range=to_range(func_range),
-                    filename=call_from.source_mapping.filename.absolute,
-                    offset=get_definition(call_from, call_comp).start,
-                )
-                res[item].add(to_range(expr_range))
-        return [
-            lsp.CallHierarchyIncomingCall(
-                from_=lsp.CallHierarchyItem(
-                    name=call_from.name,
-                    kind=lsp.SymbolKind.Function,
-                    uri=fs_path_to_uri(call_from.filename),
-                    range=to_lsp_range(call_from.range),
-                    selection_range=to_lsp_range(call_from.range),
-                    data={
-                        "filename": call_from.filename,
-                        "offset": call_from.offset,
-                    },
-                ),
-                from_ranges=[to_lsp_range(range) for range in ranges],
-            )
-            for (call_from, ranges) in res.items()
-        ]
-
-    def _on_get_outgoing_calls(
-        self, params: lsp.CallHierarchyOutgoingCallsParams
-    ) -> Optional[List[lsp.CallHierarchyOutgoingCall]]:
-        res: Dict[CallItem, Set[Range]] = defaultdict(set)
-
-        # Obtain our filename for this file
-        target_filename_str = params.item.data["filename"]
-        target_offset = params.item.data["offset"]
-
-        for analysis, comp in self._get_analyses_containing(target_filename_str):
-            objects = analysis.offset_to_objects(target_filename_str, target_offset)
-            for obj in objects:
-                if not isinstance(obj, Function):
-                    continue
-                calls = [
-                    op
-                    for op in obj.all_slithir_operations()
-                    if isinstance(op, (InternalCall, HighLevelCall))
-                ]
-                for call in calls:
-                    if not isinstance(call.function, Function):
-                        continue
-                    call_to = call.function
-                    expr_range = source_to_range(call.expression.source_mapping)
-                    func_range = source_to_range(call_to.source_mapping)
-                    item = CallItem(
-                        name=call_to.canonical_name,
-                        range=to_range(func_range),
-                        filename=call_to.source_mapping.filename.absolute,
-                        offset=get_definition(call_to, comp).start,
-                    )
-                    res[item].add(to_range(expr_range))
-
-        return [
-            lsp.CallHierarchyOutgoingCall(
-                to=lsp.CallHierarchyItem(
-                    name=call_to.name,
-                    kind=lsp.SymbolKind.Function,
-                    uri=fs_path_to_uri(call_to.filename),
-                    range=to_lsp_range(call_to.range),
-                    selection_range=to_lsp_range(call_to.range),
-                    data={
-                        "filename": call_to.filename,
-                        "offset": call_to.offset,
-                    },
-                ),
-                from_ranges=[to_lsp_range(range) for range in ranges],
-            )
-            for (call_to, ranges) in res.items()
-        ]
-
     def _on_prepare_type_hierarchy(
         self, params: lsp.TypeHierarchyPrepareParams
     ) -> Optional[List[lsp.TypeHierarchyItem]]:
@@ -832,7 +619,7 @@ class SlitherServer(LanguageServer):
         # Obtain our filename for this file
         target_filename_str: str = uri_to_fs_path(params.text_document.uri)
 
-        for analysis, comp in self._get_analyses_containing(target_filename_str):
+        for analysis, comp in self.get_analyses_containing(target_filename_str):
             # Obtain the offset for this line + character position
             target_offset = comp.get_global_offset_from_line(
                 target_filename_str, params.position.line + 1
@@ -889,7 +676,7 @@ class SlitherServer(LanguageServer):
 
         referenced_contracts = [
             contract
-            for analysis, _ in self._get_analyses_containing(target_filename_str)
+            for analysis, _ in self.get_analyses_containing(target_filename_str)
             for contract in analysis.offset_to_objects(
                 target_filename_str, target_offset
             )
@@ -950,7 +737,7 @@ class SlitherServer(LanguageServer):
 
         supertypes = [
             (supertype, comp)
-            for analysis, comp in self._get_analyses_containing(target_filename_str)
+            for analysis, comp in self.get_analyses_containing(target_filename_str)
             for contract in analysis.offset_to_objects(
                 target_filename_str, target_offset
             )

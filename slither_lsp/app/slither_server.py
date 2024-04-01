@@ -1,7 +1,6 @@
 import logging
 import os
 from concurrent.futures import ThreadPoolExecutor, wait
-from dataclasses import dataclass
 from functools import lru_cache
 from threading import Lock
 from time import sleep
@@ -20,19 +19,19 @@ from slither.__main__ import (
 from slither.__main__ import (
     get_detectors_and_printers,
 )
-from slither.core.declarations import Contract
-from slither.utils.source_mapping import get_definition
 
 from slither_lsp.app.feature_analyses.slither_diagnostics import SlitherDiagnostics
 from slither_lsp.app.request_handlers import (
     register_on_find_references,
     register_on_get_incoming_calls,
     register_on_get_outgoing_calls,
+    register_on_get_subtypes,
+    register_on_get_supertypes,
     register_on_goto_definition,
     register_on_goto_implementation,
     register_on_prepare_call_hierarchy,
+    register_on_prepare_type_hierarchy,
 )
-from slither_lsp.app.request_handlers.types import Range, to_lsp_range, to_range
 from slither_lsp.app.types.analysis_structures import (
     AnalysisResult,
     CompilationTarget,
@@ -57,21 +56,11 @@ from slither_lsp.app.utils.file_paths import (
     normalize_uri,
     uri_to_fs_path,
 )
-from slither_lsp.app.utils.ranges import get_object_name_range
 
 # TODO(frabert): Maybe this should be upstreamed? https://github.com/openlawlibrary/pygls/discussions/338
 METHOD_TO_OPTIONS[lsp.WORKSPACE_DID_CHANGE_WATCHED_FILES] = (
     lsp.DidChangeWatchedFilesRegistrationOptions
 )
-
-
-@dataclass(frozen=True)
-class TypeItem:
-    name: str
-    range: Range
-    kind: lsp.SymbolKind
-    filename: str
-    offset: str
 
 
 class SlitherProtocol(LanguageServerProtocol):
@@ -186,20 +175,9 @@ class SlitherServer(LanguageServer):
         register_on_get_incoming_calls(self)
         register_on_get_outgoing_calls(self)
 
-        @self.thread()
-        @self.feature(lsp.TEXT_DOCUMENT_PREPARE_TYPE_HIERARCHY)
-        def on_prepare_type_hierarchy(ls: SlitherServer, params):
-            return ls._on_prepare_type_hierarchy(params)
-
-        @self.thread()
-        @self.feature(lsp.TYPE_HIERARCHY_SUBTYPES)
-        def on_get_subtypes(ls: SlitherServer, params):
-            return ls._on_get_subtypes(params)
-
-        @self.thread()
-        @self.feature(lsp.TYPE_HIERARCHY_SUPERTYPES)
-        def on_get_supertypes(ls: SlitherServer, params):
-            return ls._on_get_supertypes(params)
+        register_on_prepare_type_hierarchy(self)
+        register_on_get_subtypes(self)
+        register_on_get_supertypes(self)
 
     @property
     def workspace_opened(self):
@@ -609,167 +587,4 @@ class SlitherServer(LanguageServer):
             for analysis_result in self.analyses.copy()
             if analysis_result.analysis is not None
             and lookup(analysis_result.compilation) is not None
-        ]
-
-    def _on_prepare_type_hierarchy(
-        self, params: lsp.TypeHierarchyPrepareParams
-    ) -> Optional[List[lsp.TypeHierarchyItem]]:
-        res: Set[TypeItem] = set()
-
-        # Obtain our filename for this file
-        target_filename_str: str = uri_to_fs_path(params.text_document.uri)
-
-        for analysis, comp in self.get_analyses_containing(target_filename_str):
-            # Obtain the offset for this line + character position
-            target_offset = comp.get_global_offset_from_line(
-                target_filename_str, params.position.line + 1
-            )
-            # Obtain objects
-            objects = analysis.offset_to_objects(
-                target_filename_str, target_offset + params.position.character
-            )
-            for obj in objects:
-                source = obj.source_mapping
-                if not isinstance(obj, Contract):
-                    continue
-                offset = get_definition(obj, comp).start
-                range = get_object_name_range(obj, comp)
-                if obj.is_interface:
-                    kind = lsp.SymbolKind.Interface
-                else:
-                    kind = lsp.SymbolKind.Class
-                res.add(
-                    TypeItem(
-                        name=obj.name,
-                        range=to_range(range),
-                        kind=kind,
-                        filename=source.filename.absolute,
-                        offset=offset,
-                    )
-                )
-        return [
-            lsp.TypeHierarchyItem(
-                name=item.name,
-                kind=item.kind,
-                uri=fs_path_to_uri(item.filename),
-                range=to_lsp_range(item.range),
-                selection_range=to_lsp_range(item.range),
-                data={
-                    "filename": item.filename,
-                    "offset": item.offset,
-                },
-            )
-            for item in res
-        ]
-
-    def _on_get_subtypes(
-        self, params: lsp.TypeHierarchySubtypesParams
-    ) -> Optional[List[lsp.TypeHierarchyItem]]:
-        res: Set[TypeItem] = set()
-
-        # Obtain our filename for this file
-        # These will have been populated either by
-        # the initial "prepare call hierarchy" or by
-        # other calls to "get incoming calls"
-        target_filename_str = params.item.data["filename"]
-        target_offset = params.item.data["offset"]
-
-        referenced_contracts = [
-            contract
-            for analysis, _ in self.get_analyses_containing(target_filename_str)
-            for contract in analysis.offset_to_objects(
-                target_filename_str, target_offset
-            )
-            if isinstance(contract, Contract)
-        ]
-
-        contracts = [
-            (contract, analysis_result.compilation)
-            for analysis_result in self.analyses.copy()
-            if analysis_result.analysis is not None
-            for comp_unit in analysis_result.analysis.compilation_units
-            for contract in comp_unit.contracts
-        ]
-
-        for contract in referenced_contracts:
-            for other_contract, other_contract_comp in contracts:
-                if contract not in other_contract.immediate_inheritance:
-                    continue
-                range = get_object_name_range(other_contract, other_contract_comp)
-                if other_contract.is_interface:
-                    kind = lsp.SymbolKind.Interface
-                else:
-                    kind = lsp.SymbolKind.Class
-                item = TypeItem(
-                    name=other_contract.name,
-                    range=to_range(range),
-                    kind=kind,
-                    filename=other_contract.source_mapping.filename.absolute,
-                    offset=get_definition(other_contract, other_contract_comp).start,
-                )
-                res.add(item)
-        return [
-            lsp.TypeHierarchyItem(
-                name=item.name,
-                kind=item.kind,
-                uri=fs_path_to_uri(item.filename),
-                range=to_lsp_range(item.range),
-                selection_range=to_lsp_range(item.range),
-                data={
-                    "filename": item.filename,
-                    "offset": item.offset,
-                },
-            )
-            for item in res
-        ]
-
-    def _on_get_supertypes(
-        self, params: lsp.TypeHierarchySupertypesParams
-    ) -> Optional[List[lsp.TypeHierarchyItem]]:
-        res: Set[TypeItem] = set()
-
-        # Obtain our filename for this file
-        # These will have been populated either by
-        # the initial "prepare call hierarchy" or by
-        # other calls to "get incoming calls"
-        target_filename_str = params.item.data["filename"]
-        target_offset = params.item.data["offset"]
-
-        supertypes = [
-            (supertype, comp)
-            for analysis, comp in self.get_analyses_containing(target_filename_str)
-            for contract in analysis.offset_to_objects(
-                target_filename_str, target_offset
-            )
-            if isinstance(contract, Contract)
-            for supertype in contract.immediate_inheritance
-        ]
-
-        for sup, comp in supertypes:
-            range = get_object_name_range(sup, comp)
-            if sup.is_interface:
-                kind = lsp.SymbolKind.Interface
-            else:
-                kind = lsp.SymbolKind.Class
-            item = TypeItem(
-                name=sup.name,
-                range=to_range(range),
-                kind=kind,
-                filename=sup.source_mapping.filename.absolute,
-                offset=get_definition(sup, comp).start,
-            )
-            res.add(item)
-        return [
-            lsp.TypeHierarchyItem(
-                name=item.name,
-                kind=item.kind,
-                uri=fs_path_to_uri(item.filename),
-                range=to_lsp_range(item.range),
-                selection_range=to_lsp_range(item.range),
-                data={
-                    "filename": item.filename,
-                    "offset": item.offset,
-                },
-            )
-            for item in res
         ]

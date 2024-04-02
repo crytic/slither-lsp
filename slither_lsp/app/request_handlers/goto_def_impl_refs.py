@@ -21,12 +21,8 @@ def _inspect_analyses(
     # Compile a list of definitions
     results = []
 
-    # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
-    # there's no need to acquire a lock here
-    analyses_copy = ls.analyses.copy()
-
     # Loop through all compilations
-    for analysis_result in analyses_copy:
+    for analysis_result in ls.analyses:
         if analysis_result.analysis is not None:
             # TODO: Remove this temporary try/catch once we refactor crytic-compile to now throw errors in
             #  these functions.

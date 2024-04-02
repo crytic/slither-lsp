@@ -56,6 +56,7 @@ from slither_lsp.app.utils.file_paths import (
     normalize_uri,
     uri_to_fs_path,
 )
+from slither_lsp.app.logging import LSPHandler
 
 # TODO(frabert): Maybe this should be upstreamed? https://github.com/openlawlibrary/pygls/discussions/338
 METHOD_TO_OPTIONS[lsp.WORKSPACE_DID_CHANGE_WATCHED_FILES] = (
@@ -122,6 +123,7 @@ class SlitherServer(LanguageServer):
         super().__init__(protocol_cls=SlitherProtocol, *args)
 
         self._logger = logger
+        self._logger.addHandler(LSPHandler(self))
         self.slither_diagnostics = SlitherDiagnostics(self)
 
         @self.feature(lsp.INITIALIZE)

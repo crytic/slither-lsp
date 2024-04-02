@@ -173,9 +173,6 @@ class AnalysisResult:
     succeeded: bool = attrs.field()
     """ Defines if our analysis succeeded """
 
-    compilation_target: CompilationTarget = attrs.field()
-    """ Our compilation target settings """
-
     compilation: Optional[CryticCompile] = attrs.field()
     """ Our compilation result """
 

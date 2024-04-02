@@ -88,10 +88,6 @@ def register_on_get_incoming_calls(ls: "SlitherServer"):
         target_filename_str = params.item.data["filename"]
         target_offset = params.item.data["offset"]
 
-        # According to https://docs.python.org/3/faq/library.html#what-kinds-of-global-value-mutation-are-thread-safe
-        # there's no need to acquire a lock here
-        analyses_copy = ls.analyses.copy()
-
         referenced_functions = [
             obj
             for analysis, comp in ls.get_analyses_containing(target_filename_str)
@@ -101,7 +97,7 @@ def register_on_get_incoming_calls(ls: "SlitherServer"):
 
         calls = [
             (f, op, analysis_result.compilation)
-            for analysis_result in analyses_copy
+            for analysis_result in ls.analyses
             if analysis_result.analysis is not None
             for comp_unit in analysis_result.analysis.compilation_units
             for f in comp_unit.functions

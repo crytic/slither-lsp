@@ -104,7 +104,7 @@ def register_on_get_subtypes(ls: "SlitherServer"):
 
         contracts = [
             (contract, analysis_result.compilation)
-            for analysis_result in ls.analyses.copy()
+            for analysis_result in ls.analyses
             if analysis_result.analysis is not None
             for comp_unit in analysis_result.analysis.compilation_units
             for contract in comp_unit.contracts

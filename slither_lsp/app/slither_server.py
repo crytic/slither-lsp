@@ -263,7 +263,7 @@ class SlitherServer(LanguageServer):
 
         return [
             (analysis_result.analysis, analysis_result.compilation)
-            for analysis_result in self.analyses.copy()
+            for analysis_result in self.analyses
             if analysis_result.analysis is not None
             and analysis_result.compilation is not None
             and lookup(analysis_result.compilation) is not None

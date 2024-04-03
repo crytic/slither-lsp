@@ -108,11 +108,7 @@ def register_on_get_incoming_calls(ls: "SlitherServer"):
 
         for func in referenced_functions:
             for call_from, call, call_comp in calls:
-                # TODO(frabert): Ideally we'd do this instead, but apparently the same function may be represented by multiple objects in Slither
-                # if call.function is not func:
-                #     continue
-
-                if call.function.canonical_name != func.canonical_name:
+                if call.function is not func:
                     continue
                 expr_range = source_to_range(call.expression.source_mapping)
                 func_range = source_to_range(call_from.source_mapping)

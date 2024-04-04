@@ -13,9 +13,6 @@ def create_server(logger: Logger):
     server.feature(slsp.SLITHER_GET_DETECTOR_LIST)(request_handlers.get_detector_list)
     server.feature(slsp.SLITHER_GET_VERSION)(request_handlers.get_version)
 
-    server.feature(slsp.CRYTIC_COMPILE_SOLC_STANDARD_JSON_AUTOGENERATE)(
-        request_handlers.autogenerate_standard_json
-    )
     server.feature(slsp.CRYTIC_COMPILE_GET_COMMAND_LINE_ARGUMENTS)(
         request_handlers.get_command_line_args
     )

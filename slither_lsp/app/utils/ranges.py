@@ -1,22 +1,25 @@
-from typing import Optional
+from typing import Union
 
 import lsprotocol.types as lsp
 from crytic_compile.crytic_compile import CryticCompile
-from slither.core.declarations import Contract, Function
+from slither.core.declarations import (
+    Contract,
+    Enum,
+    Event,
+    Function,
+    Structure,
+)
 from slither.core.source_mapping.source_mapping import Source
 from slither.utils.source_mapping import get_definition
 from slither_lsp.app.utils.file_paths import fs_path_to_uri
 
 
-def source_to_range(source: Source) -> Optional[lsp.Range]:
+def source_to_range(source: Source) -> lsp.Range:
     """
     Converts a slither Source mapping object into a Language Server Protocol Location.
     :param source: The slither Source mapping object to convert into a Location.
-    :return: Returns a Location representing the slither Source mapping object. None if no valid mapping exists.
+    :return: Returns a Location representing the slither Source mapping object.
     """
-    # If there are no mapped lines, we don't return a location.
-    if len(source.lines) == 0:
-        return None
 
     # Otherwise we can return a location fairly easily.
     return lsp.Range(
@@ -31,15 +34,12 @@ def source_to_range(source: Source) -> Optional[lsp.Range]:
     )
 
 
-def source_to_location(source: Source) -> Optional[lsp.Location]:
+def source_to_location(source: Source) -> lsp.Location:
     """
     Converts a slither Source mapping object into a Language Server Protocol Location.
     :param source: The slither Source mapping object to convert into a Location.
-    :return: Returns a Location representing the slither Source mapping object. None if no valid mapping exists.
+    :return: Returns a Location representing the slither Source mapping object.
     """
-    # If there are no mapped lines, we don't return a location.
-    if len(source.lines) == 0:
-        return None
 
     # Otherwise we can return a location fairly easily.
     return lsp.Location(
@@ -48,7 +48,7 @@ def source_to_location(source: Source) -> Optional[lsp.Location]:
     )
 
 
-def get_object_name_range(obj: Function | Contract, comp: CryticCompile) -> lsp.Range:
+def get_object_name_range(obj: Union[Function, Contract, Enum, Event, Structure], comp: CryticCompile) -> lsp.Range:
     name_pos = get_definition(obj, comp)
     return lsp.Range(
         start=lsp.Position(

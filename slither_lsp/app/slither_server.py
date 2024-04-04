@@ -31,6 +31,7 @@ from slither_lsp.app.request_handlers import (
     register_on_goto_implementation,
     register_on_prepare_call_hierarchy,
     register_on_prepare_type_hierarchy,
+    register_inlay_hints_handlers,
 )
 from slither_lsp.app.types.analysis_structures import (
     AnalysisResult,
@@ -128,6 +129,8 @@ class SlitherServer(LanguageServer):
         register_on_prepare_type_hierarchy(self)
         register_on_get_subtypes(self)
         register_on_get_supertypes(self)
+
+        register_inlay_hints_handlers(self)
 
     @property
     def workspace_opened(self):

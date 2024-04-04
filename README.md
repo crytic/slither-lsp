@@ -7,4 +7,9 @@ Run the following command from the project root directory (preferably inside a P
     python -m pip install .
 
 ## Features
-* TODO
+
+* Go to implementations/definitions
+* Find all references
+* Show call hierarchy
+* Show type hierarchy
+* View and filter detector results

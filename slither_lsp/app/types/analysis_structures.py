@@ -1,66 +1,8 @@
-from enum import Enum
-from typing import Any, Dict, List, Optional, Union
+from typing import List, Optional
 
 import attrs
 from crytic_compile import CryticCompile
 from slither import Slither
-
-
-class CompilationTargetType(Enum):
-    """
-    Represents the type of target for compilation.
-    """
-
-    BASIC = "basic"
-    STANDARD_JSON = "standard_json"
-
-
-@attrs.define
-class CompilationTargetBasic:
-    """
-    Data structure which represents options to compile against a basic string path target for crytic-compile.
-    """
-
-    target: str = attrs.field()
-    """ The target destination for a crytic-compile target. """
-
-
-@attrs.define
-class CompilationTargetStandardJson:
-    """
-    Data structure which represents options to compile against solc standard json via crytic-compile.
-    References:
-        https://docs.soliditylang.org/en/latest/using-the-compiler.html#compiler-input-and-output-json-description
-    """
-
-    target: Any = attrs.field()
-    """ The target destination for a crytic-compile target. """
-
-
-@attrs.define
-class CompilationTarget:
-    """
-    Data structure which represents options to compile solidity files.
-    """
-
-    target_type: CompilationTargetType = attrs.field()
-    """ Defines the type of target for compilation settings. """
-
-    target_basic: Optional[CompilationTargetBasic] = attrs.field(default=None)
-    """ Defines compilation settings for a BASIC target type. """
-
-    target_standard_json: Optional[CompilationTargetStandardJson] = attrs.field(
-        default=None
-    )
-    """ Defines compilation settings for a STANDARD_JSON target type. """
-
-    cwd_workspace: Optional[str] = attrs.field(default=None)
-    """ Defines an optional workspace folder name to use as the working directory. """
-
-    crytic_compile_args: Optional[Dict[str, Union[str, bool]]] = attrs.field(
-        default=None
-    )
-    """ Additional arguments to provide to crytic-compile. """
 
 
 @attrs.define

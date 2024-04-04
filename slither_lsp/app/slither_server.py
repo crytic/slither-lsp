@@ -38,7 +38,6 @@ from slither_lsp.app.types.analysis_structures import (
     SlitherDetectorSettings,
 )
 from slither_lsp.app.types.params import (
-    COMPILATION_SET_COMPILATION_TARGETS,
     METHOD_TO_TYPES,
     SLITHER_SET_DETECTOR_SETTINGS,
     SLITHER_ANALYZE,

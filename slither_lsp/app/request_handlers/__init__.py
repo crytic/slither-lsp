@@ -16,3 +16,4 @@ from .type_hierarchy import (
     register_on_prepare_type_hierarchy,
 )
 from .inlay_hints import register_inlay_hints_handlers
+from .symbols import register_symbols_handlers

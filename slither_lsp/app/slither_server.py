@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor
 from functools import lru_cache
 from threading import Lock
 from typing import Dict, List, Optional, Tuple, Type
+from os.path import split
 
 import lsprotocol.types as lsp
 from crytic_compile.crytic_compile import CryticCompile
@@ -40,6 +41,8 @@ from slither_lsp.app.types.params import (
     COMPILATION_SET_COMPILATION_TARGETS,
     METHOD_TO_TYPES,
     SLITHER_SET_DETECTOR_SETTINGS,
+    SLITHER_ANALYZE,
+    AnalysisRequestParams,
 )
 from slither_lsp.app.utils.file_paths import normalize_uri, uri_to_fs_path
 
@@ -111,9 +114,9 @@ class SlitherServer(LanguageServer):
             ls._on_set_detector_settings(params)
 
         @self.thread()
-        @self.feature(COMPILATION_SET_COMPILATION_TARGETS)
-        def on_set_compilation_targets(ls: SlitherServer, params):
-            pass
+        @self.feature(SLITHER_ANALYZE)
+        def on_analyze(ls: SlitherServer, params):
+            ls._on_analyze(params)
 
         register_on_goto_definition(self)
         register_on_goto_implementation(self)
@@ -148,11 +151,23 @@ class SlitherServer(LanguageServer):
         for workspace in params.workspace_folders or []:
             self.queue_compile_workspace(normalize_uri(workspace.uri))
 
+    def _on_analyze(self, params: AnalysisRequestParams):
+        uris = [normalize_uri(uri) for uri in params.uris or self.workspaces.keys()]
+        for uri in uris:
+            path = uri_to_fs_path(uri)
+            workspace_name = split(path)[1]
+            if self.workspace_in_progress[uri].locked():
+                self.show_message(
+                    f"Analysis for {workspace_name} is already in progress",
+                    lsp.MessageType.Warning,
+                )
+                continue
+            self.queue_compile_workspace(uri)
+
     def queue_compile_workspace(self, uri: str):
         """
         Queues a workspace for compilation. `uri` should be normalized
         """
-        from os.path import split
         path = uri_to_fs_path(uri)
         workspace_name = split(path)[1]
 

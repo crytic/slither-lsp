@@ -8,6 +8,11 @@ from slither_lsp.app.types.analysis_structures import (
 
 
 @attrs.define
+class AnalysisRequestParams:
+    uris: Optional[List[str]] = attrs.field()
+
+
+@attrs.define
 class SetCompilationTargetsParams:
     """
     Data structure which represents parameters used to set compilation targets
@@ -43,6 +48,7 @@ class AnalysisProgressParams:
     """ A list of analysis results, one for each compilation target. """
 
 
+SLITHER_ANALYZE = "$/slither/analyze"
 SLITHER_GET_DETECTOR_LIST = "$/slither/getDetectorList"
 SLITHER_GET_VERSION = "$/slither/getVersion"
 SLITHER_SET_DETECTOR_SETTINGS = "$/slither/setDetectorSettings"

@@ -33,6 +33,7 @@ from slither_lsp.app.request_handlers import (
     register_on_prepare_type_hierarchy,
     register_inlay_hints_handlers,
     register_symbols_handlers,
+    register_code_lens_handlers,
 )
 from slither_lsp.app.types.analysis_structures import (
     AnalysisResult,
@@ -134,6 +135,8 @@ class SlitherServer(LanguageServer):
         register_inlay_hints_handlers(self)
 
         register_symbols_handlers(self)
+
+        register_code_lens_handlers(self)
 
     @property
     def workspace_opened(self):

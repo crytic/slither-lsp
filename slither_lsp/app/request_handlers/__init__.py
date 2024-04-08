@@ -17,3 +17,4 @@ from .type_hierarchy import (
 )
 from .inlay_hints import register_inlay_hints_handlers
 from .symbols import register_symbols_handlers
+from .code_lens import register_code_lens_handlers

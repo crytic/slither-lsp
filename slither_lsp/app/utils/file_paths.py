@@ -5,7 +5,7 @@ from urllib.request import url2pathname, pathname2url
 
 
 def is_solidity_file(path: str) -> bool:
-    filename_base, file_extension = os.path.splitext(path)
+    _, file_extension = os.path.splitext(path)
     return file_extension is not None and file_extension.lower() == ".sol"
 
 

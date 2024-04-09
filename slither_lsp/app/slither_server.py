@@ -1,3 +1,5 @@
+# pylint: disable=broad-exception-caught, protected-access, unused-argument
+
 import logging
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -179,7 +181,7 @@ class SlitherServer(LanguageServer):
         path = uri_to_fs_path(uri)
         workspace_name = split(path)[1]
 
-        def compile():
+        def do_compile():
             detector_classes, _ = get_detectors_and_printers()
             with self.workspace_in_progress[uri]:
                 self.show_message(
@@ -232,7 +234,7 @@ class SlitherServer(LanguageServer):
                 )
                 self._refresh_detector_output()
 
-        self.analysis_pool.submit(compile)
+        self.analysis_pool.submit(do_compile)
 
     def _on_did_change_workspace_folders(
         self, params: lsp.DidChangeWorkspaceFoldersParams

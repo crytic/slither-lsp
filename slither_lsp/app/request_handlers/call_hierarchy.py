@@ -70,7 +70,7 @@ def register_on_prepare_call_hierarchy(ls: "SlitherServer"):
                         "offset": offset,
                     },
                 )
-        return [elem for elem in res.values()]
+        return list(res.values())
 
 
 def register_on_get_incoming_calls(ls: "SlitherServer"):

@@ -136,7 +136,7 @@ class SlitherDiagnostics:
         :return: None
         """
         # Loop through all diagnostic files, publish new diagnostics for each file with no items.
-        for file_uri in self.diagnostics.keys():
+        for file_uri, _ in self.diagnostics:
             self._clear_single(file_uri, False)
 
         # Clear the dictionary

@@ -49,9 +49,9 @@ from slither_lsp.app.types.params import (
 from slither_lsp.app.utils.file_paths import normalize_uri, uri_to_fs_path
 
 # TODO(frabert): Maybe this should be upstreamed? https://github.com/openlawlibrary/pygls/discussions/338
-METHOD_TO_OPTIONS[lsp.WORKSPACE_DID_CHANGE_WATCHED_FILES] = (
-    lsp.DidChangeWatchedFilesRegistrationOptions
-)
+METHOD_TO_OPTIONS[
+    lsp.WORKSPACE_DID_CHANGE_WATCHED_FILES
+] = lsp.DidChangeWatchedFilesRegistrationOptions
 
 
 class SlitherProtocol(LanguageServerProtocol):

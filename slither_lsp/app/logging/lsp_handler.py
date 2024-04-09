@@ -16,6 +16,7 @@ class LSPHandler(Handler):
     """
     Forwards log messages to the LSP client
     """
+
     def __init__(self, server: LanguageServer):
         Handler.__init__(self)
         self.server = server

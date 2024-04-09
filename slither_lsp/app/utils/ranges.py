@@ -48,7 +48,9 @@ def source_to_location(source: Source) -> lsp.Location:
     )
 
 
-def get_object_name_range(obj: Union[Function, Contract, Enum, Event, Structure], comp: CryticCompile) -> lsp.Range:
+def get_object_name_range(
+    obj: Union[Function, Contract, Enum, Event, Structure], comp: CryticCompile
+) -> lsp.Range:
     name_pos = get_definition(obj, comp)
     return lsp.Range(
         start=lsp.Position(

@@ -1,10 +1,11 @@
+# pylint: disable=unused-argument
+
 from importlib.metadata import version as pkg_version
-from typing import Any
 
 from pygls.server import LanguageServer
 
 
-def get_version(ls: LanguageServer, params: Any) -> Any:
+def get_version(ls: LanguageServer, params):
     """
     Handler which retrieves versions for slither, crytic-compile, and related applications.
     """

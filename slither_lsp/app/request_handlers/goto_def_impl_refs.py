@@ -1,3 +1,5 @@
+# pylint: disable=broad-exception-caught
+
 from typing import TYPE_CHECKING, Callable, List, Optional, Set
 
 import lsprotocol.types as lsp

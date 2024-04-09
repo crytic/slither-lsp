@@ -37,6 +37,7 @@
             run: |
               mkdir -p .github/linters
               cp pyproject.toml .github/linters
+              pip install .
     
           - name: Register pylint problem matcher
             run: |

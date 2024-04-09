@@ -1,8 +1,8 @@
 from importlib.metadata import version as pkg_version
 from logging import Logger
 
-import slither_lsp.app.request_handlers as request_handlers
 import slither_lsp.app.types.params as slsp
+from slither_lsp.app import request_handlers
 from slither_lsp.app.slither_server import SlitherServer
 
 

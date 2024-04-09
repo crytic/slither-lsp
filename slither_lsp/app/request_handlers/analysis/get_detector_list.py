@@ -1,10 +1,10 @@
-from typing import Any
+# pylint: disable=unused-argument
 
 from pygls.server import LanguageServer
 from slither.__main__ import get_detectors_and_printers, output_detectors_json
 
 
-def get_detector_list(ls: LanguageServer, params: Any) -> Any:
+def get_detector_list(ls: LanguageServer, params):
     """
     Handler which invokes slither to obtain a list of all detectors and some properties that describe them.
     """

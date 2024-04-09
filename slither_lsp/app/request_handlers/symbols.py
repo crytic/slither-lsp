@@ -1,3 +1,5 @@
+# pylint: disable=too-many-branches
+
 from typing import TYPE_CHECKING, List, Optional
 
 import lsprotocol.types as lsp
@@ -21,6 +23,17 @@ def register_symbols_handlers(ls: "SlitherServer"):
         # Obtain our filename for this file
         target_filename_str: str = uri_to_fs_path(params.text_document.uri)
         res: List[lsp.DocumentSymbol] = []
+
+        def add_child(children, obj, kind):
+            children.append(
+                lsp.DocumentSymbol(
+                    name=obj.name,
+                    kind=kind,
+                    range=source_to_range(obj.source_mapping),
+                    selection_range=get_object_name_range(obj, comp),
+                )
+            )
+
         for analysis, comp in ls.get_analyses_containing(target_filename_str):
             filename = comp.filename_lookup(target_filename_str)
 
@@ -36,35 +49,25 @@ def register_symbols_handlers(ls: "SlitherServer"):
                     kind = lsp.SymbolKind.Class
                 children: List[lsp.DocumentSymbol] = []
 
-                def add_child(obj, kind):
-                    children.append(
-                        lsp.DocumentSymbol(
-                            name=obj.name,
-                            kind=kind,
-                            range=source_to_range(obj.source_mapping),
-                            selection_range=get_object_name_range(obj, comp),
-                        )
-                    )
-
                 for struct in contract.structures_declared:
                     if struct.source_mapping is None:
                         continue
-                    add_child(struct, lsp.SymbolKind.Struct)
+                    add_child(children, struct, lsp.SymbolKind.Struct)
 
                 for enum in contract.enums_declared:
                     if enum.source_mapping is None:
                         continue
-                    add_child(enum, lsp.SymbolKind.Enum)
+                    add_child(children, enum, lsp.SymbolKind.Enum)
 
                 for event in contract.events_declared:
                     if event.source_mapping is None:
                         continue
-                    add_child(event, lsp.SymbolKind.Enum)
+                    add_child(children, event, lsp.SymbolKind.Enum)
 
                 for func in contract.functions_and_modifiers_declared:
                     if func.source_mapping is None:
                         continue
-                    add_child(func, lsp.SymbolKind.Function)
+                    add_child(children, func, lsp.SymbolKind.Function)
 
                 res.append(
                     lsp.DocumentSymbol(

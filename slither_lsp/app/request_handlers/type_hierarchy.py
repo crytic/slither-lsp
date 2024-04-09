@@ -48,7 +48,7 @@ def register_on_prepare_type_hierarchy(ls: "SlitherServer"):
                 if not isinstance(obj, Contract):
                     continue
                 offset = get_definition(obj, comp).start
-                range = get_object_name_range(obj, comp)
+                range_ = get_object_name_range(obj, comp)
                 if obj.is_interface:
                     kind = lsp.SymbolKind.Interface
                 else:
@@ -56,7 +56,7 @@ def register_on_prepare_type_hierarchy(ls: "SlitherServer"):
                 res.add(
                     TypeItem(
                         name=obj.name,
-                        range=to_range(range),
+                        range=to_range(range_),
                         kind=kind,
                         filename=source.filename.absolute,
                         offset=offset,
@@ -114,14 +114,14 @@ def register_on_get_subtypes(ls: "SlitherServer"):
             for other_contract, other_contract_comp in contracts:
                 if contract not in other_contract.immediate_inheritance:
                     continue
-                range = get_object_name_range(other_contract, other_contract_comp)
+                range_ = get_object_name_range(other_contract, other_contract_comp)
                 if other_contract.is_interface:
                     kind = lsp.SymbolKind.Interface
                 else:
                     kind = lsp.SymbolKind.Class
                 item = TypeItem(
                     name=other_contract.name,
-                    range=to_range(range),
+                    range=to_range(range_),
                     kind=kind,
                     filename=other_contract.source_mapping.filename.absolute,
                     offset=get_definition(other_contract, other_contract_comp).start,
@@ -169,14 +169,14 @@ def register_on_get_supertypes(ls: "SlitherServer"):
         ]
 
         for sup, comp in supertypes:
-            range = get_object_name_range(sup, comp)
+            range_ = get_object_name_range(sup, comp)
             if sup.is_interface:
                 kind = lsp.SymbolKind.Interface
             else:
                 kind = lsp.SymbolKind.Class
             item = TypeItem(
                 name=sup.name,
-                range=to_range(range),
+                range=to_range(range_),
                 kind=kind,
                 filename=sup.source_mapping.filename.absolute,
                 offset=get_definition(sup, comp).start,

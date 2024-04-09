@@ -1,11 +1,12 @@
+# pylint: disable=protected-access, unused-argument
+
 from argparse import ArgumentParser
-from typing import Any
 
 from crytic_compile.cryticparser.cryticparser import init as crytic_parser_init
 from pygls.server import LanguageServer
 
 
-def get_command_line_args(ls: LanguageServer, params: Any) -> Any:
+def get_command_line_args(ls: LanguageServer, params):
     """
     Handler which obtains data regarding all command line arguments available in crytic-compile.
     """

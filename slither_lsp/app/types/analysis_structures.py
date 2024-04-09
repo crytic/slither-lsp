@@ -59,15 +59,15 @@ class SlitherDetectorResultElement:
     """ The type of item this represents (contract, function, etc.) """
 
     @staticmethod
-    def from_dict(dict):
+    def from_dict(dict_):
         return SlitherDetectorResultElement(
-            name=dict["name"],
+            name=dict_["name"],
             source_mapping=(
-                SlitherDetectorResultElementSourceMapping(**dict["source_mapping"])
-                if dict["source_mapping"]
+                SlitherDetectorResultElementSourceMapping(**dict_["source_mapping"])
+                if dict_["source_mapping"]
                 else None
             ),
-            type=dict["type"],
+            type=dict_["type"],
         )
 
 
@@ -93,15 +93,15 @@ class SlitherDetectorResult:
     """ Source mapped elements that are relevant to this detector result. """
 
     @staticmethod
-    def from_dict(dict):
+    def from_dict(dict_):
         return SlitherDetectorResult(
-            check=dict["check"],
-            confidence=dict["confidence"],
-            impact=dict["impact"],
-            description=dict["description"],
+            check=dict_["check"],
+            confidence=dict_["confidence"],
+            impact=dict_["impact"],
+            description=dict_["description"],
             elements=[
                 SlitherDetectorResultElement.from_dict(elem)
-                for elem in dict["elements"]
+                for elem in dict_["elements"]
             ],
         )
 

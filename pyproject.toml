@@ -40,8 +40,22 @@ slither-lsp = "slither_lsp.__main__:main"
 max-line-length = 120
 
 disable = """
-import-outside-toplevel,
 missing-module-docstring,
-useless-return,
-duplicate-code
+missing-class-docstring,
+missing-function-docstring,
+unnecessary-lambda,
+cyclic-import,
+line-too-long,
+invalid-name,
+fixme,
+too-many-return-statements,
+too-many-ancestors,
+logging-fstring-interpolation,
+logging-not-lazy,
+duplicate-code,
+import-error,
+unsubscriptable-object,
+unnecessary-lambda-assignment,
+too-few-public-methods,
+too-many-instance-attributes
 """
